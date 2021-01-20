@@ -1,0 +1,31 @@
+[package]
+name = "linker-lib"
+version = "0.0.1"
+edition = "2018"
+
+[lib]
+name = "linker_lib"
+crate-type = ["cdylib"]
+
+[dependencies]
+base64 = "0.10.0"
+ed25519-dalek = "1.0.0-pre.4"
+hex = "0.3.2"
+lazy_static = "1.1.0"
+num = "^0.2"
+# precision = "0.1.11"
+rand = "0.7.3"
+serde = { version = "1.0.100", features = ["derive"]  }
+serde_json = "1.0.41"
+
+ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git" }
+# ton_abi = { path = "../../../ton-labs-abi" }
+ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
+# ton_sdk = { git = "https://github.com/tonlabs/ton-sdk.git", default-features = false }
+ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
+ton_vm = { git = "https://github.com/tonlabs/ton-labs-vm.git", default-features = false }
+# ton_vm = { path = "../../../ton-labs-vm", default-features = false }
+
+[dependencies.pyo3]
+version = "0.11.0"
+features = ["extension-module"]

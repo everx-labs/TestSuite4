@@ -1,0 +1,26 @@
+{
+	"ABI version": 2,
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+				{"name":"t_number","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_number",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_number","type":"uint256"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}

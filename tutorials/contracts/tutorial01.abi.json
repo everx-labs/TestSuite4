@@ -1,0 +1,81 @@
+{
+	"ABI version": 2,
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get_struct",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"s_number","type":"uint256"},{"name":"s_address","type":"address"},{"name":"s_bool","type":"bool"},{"name":"s_bytes","type":"bytes"},{"name":"s_string","type":"bytes"},{"name":"s_array","type":"uint8[]"},{"name":"s_mapping","type":"map(uint8,bool)"}],"name":"someStruct","type":"tuple"}
+			]
+		},
+		{
+			"name": "m_number",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_number","type":"uint256"}
+			]
+		},
+		{
+			"name": "m_address",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_address","type":"address"}
+			]
+		},
+		{
+			"name": "m_bool",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_bool","type":"bool"}
+			]
+		},
+		{
+			"name": "m_bytes",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_bytes","type":"bytes"}
+			]
+		},
+		{
+			"name": "m_string",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_string","type":"bytes"}
+			]
+		},
+		{
+			"name": "m_array",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_array","type":"uint8[]"}
+			]
+		},
+		{
+			"name": "m_mapping",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_mapping","type":"map(uint8,bool)"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}

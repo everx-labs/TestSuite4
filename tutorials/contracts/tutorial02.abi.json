@@ -1,0 +1,97 @@
+{
+	"ABI version": 2,
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "set_number",
+			"inputs": [
+				{"name":"value","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "set_address",
+			"inputs": [
+				{"name":"value","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "set_bool",
+			"inputs": [
+				{"name":"value","type":"bool"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "set_string",
+			"inputs": [
+				{"name":"value","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "set_array",
+			"inputs": [
+				{"name":"value","type":"uint8[]"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_number",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_number","type":"uint256"}
+			]
+		},
+		{
+			"name": "m_address",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_address","type":"address"}
+			]
+		},
+		{
+			"name": "m_bool",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_bool","type":"bool"}
+			]
+		},
+		{
+			"name": "m_string",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_string","type":"bytes"}
+			]
+		},
+		{
+			"name": "m_array",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_array","type":"uint8[]"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}

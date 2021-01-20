@@ -1,0 +1,35 @@
+{
+	"ABI version": 2,
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+				{"name":"code","type":"cell"},
+				{"name":"data","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "deploy",
+			"inputs": [
+				{"name":"key","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_address",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_address","type":"address"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}

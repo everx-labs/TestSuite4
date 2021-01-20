@@ -1,0 +1,26 @@
+{
+	"ABI version": 2,
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+				{"name":"key","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_key",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_key","type":"uint256"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}
