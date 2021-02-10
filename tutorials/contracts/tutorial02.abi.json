@@ -27,6 +27,14 @@
 			]
 		},
 		{
+			"name": "set_bytes",
+			"inputs": [
+				{"name":"value","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "set_string",
 			"inputs": [
 				{"name":"value","type":"bytes"}
@@ -40,6 +48,22 @@
 				{"name":"value","type":"uint8[]"}
 			],
 			"outputs": [
+			]
+		},
+		{
+			"name": "set_struct",
+			"inputs": [
+				{"components":[{"name":"s_number","type":"uint256"},{"name":"s_address","type":"address"},{"name":"s_array","type":"uint8[]"}],"name":"someStruct","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get_struct",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"s_number","type":"uint256"},{"name":"s_address","type":"address"},{"name":"s_array","type":"uint8[]"}],"name":"someStruct","type":"tuple"}
 			]
 		},
 		{
@@ -71,6 +95,14 @@
 			],
 			"outputs": [
 				{"name":"m_bool","type":"bool"}
+			]
+		},
+		{
+			"name": "m_bytes",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_bytes","type":"bytes"}
 			]
 		},
 		{

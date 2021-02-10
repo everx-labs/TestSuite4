@@ -7,38 +7,18 @@
     Copyright 2019-2021 (c) TON LABS
 """
 
+'''
+
+    This tutorial demonstrates how to work with getters to receive different
+    types of data (number, address, bool, bytes, string, array and struct).
+
+'''
+
+
 import sys
 sys.path.append('../ts4_py_lib')
-import ts4lib as ts4
-from ts4lib import eq
-
-
-def test1():
-    # Deploy a contract
-    tut01 = ts4.BaseContract('tutorial01', {})
-
-    # Call a getter and ensure that we received correct integer value
-    print("Fetching 'm_number'... ", end='')
-    assert eq(3735928559, tut01.call_getter('m_number'))
-    print('ok')
-
-    # Call the getter and ensure that we received correct address
-    print("Fetching 'm_address'... ", end='')
-    expected_address = '0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069'
-    assert eq(expected_address, tut01.call_getter('m_address'))
-    print('ok')
-
-    # Call the getter and ensure that we received correct boolean value
-    print("Fetching 'm_bool'... ", end='')
-    assert eq(True, tut01.call_getter('m_bool'))
-    print('ok')
-
-    # Call the getter and ensure that we received correct bytes value
-    #   we use `bytes2str()` helper to decode string value from bytes
-    print("Fetching 'm_bytes'... ", end='')
-    assert eq('coffee', ts4.bytes2str(tut01.call_getter('m_bytes')))
-    print('ok')
-
+import ts4
+from ts4 import eq
 
 # Set a directory where the artifacts of the used contracts are located
 ts4.set_tests_path('contracts/')
@@ -46,5 +26,50 @@ ts4.set_tests_path('contracts/')
 # Toggle to print additional execution info
 ts4.set_verbose(True)
 
-# Run a test
-test1()
+# Load a contract from .tvc-file and deploy it into a virtual blockchain.
+# Constructor is called automatically.
+tut01 = ts4.BaseContract('tutorial01', {})
+
+# Call an integer getter and ensure that we received correct value
+print("Fetching 'm_number'... ", end='')
+expected_value = 3735928559
+assert eq(expected_value, tut01.call_getter('m_number'))
+print('ok')
+
+# Call the getter and ensure that we received correct address
+print("Fetching 'm_address'... ", end='')
+expected_address = '0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069'
+assert eq(expected_address, tut01.call_getter('m_address'))
+print('ok')
+
+# Call the getter and ensure that we received correct boolean value
+print("Fetching 'm_bool'... ", end='')
+assert eq(True, tut01.call_getter('m_bool'))
+print('ok')
+
+# Call string getter and check the returned value. We `bytes2str()` helper
+# to decode string value from bytes
+print("Fetching 'm_string'... ", end='')
+assert eq('green tea', ts4.bytes2str(tut01.call_getter('m_string')))
+print('ok')
+
+# Working with bytes-type is very similar to working with strings
+print("Fetching 'm_bytes'... ", end='')
+assert eq('coffee', ts4.bytes2str(tut01.call_getter('m_bytes')))
+print('ok')
+
+# Call the getter and ensure that we received correct array value
+print("Fetching 'm_array'... ", end='')
+expected_array = [1, 2, 3, 4, 5]
+assert eq(expected_array, tut01.call_getter('m_array'))
+print('ok')
+
+# Structures are represented as dictionaries on Python side
+print("Fetching 'get_struct'... ", end='')
+expected_struct = dict(
+    s_number  = expected_value,
+    s_address = expected_address,
+    s_array   = expected_array
+)
+assert eq(expected_struct, tut01.call_getter('get_struct'))
+print('ok')

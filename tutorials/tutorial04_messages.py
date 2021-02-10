@@ -7,10 +7,18 @@
     Copyright 2019-2021 (c) TON LABS
 """
 
+'''
+
+    This tutorial shows how to dispatch internal messages between contracts,
+    as well as how to catch events fired by a contract.
+
+'''
+
+
 import sys
 sys.path.append('../ts4_py_lib')
-import ts4lib as ts4  # noqa: E402
-from ts4lib import eq  # noqa: E402
+import ts4
+from ts4 import eq  # noqa: E402
 
 
 def test1():

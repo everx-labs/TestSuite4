@@ -9,7 +9,7 @@
 
 '''
 
-    This tutorial demonstrates how a contract can deploy another contracts.
+    This tutorial demonstrates how a contract can deploy another contract.
     Besides, it shows how these contract can be accessed via wrappers.
 
 '''
@@ -17,8 +17,8 @@
 
 import sys
 sys.path.append('../ts4_py_lib')
-import ts4lib as ts4
-from ts4lib import eq
+import ts4
+from ts4 import eq
 
 # Set a directory where the artifacts of the used contracts are located
 ts4.set_tests_path('contracts/')
@@ -29,6 +29,9 @@ ts4.set_verbose(True)
 # Load code and data of the second contract
 code = ts4.core.load_code_cell('contracts/tutorial05_2.tvc')
 data = ts4.core.load_data_cell('contracts/tutorial05_2.tvc')
+
+# Register ABI of the second contract in the system beforehand
+ts4.register_abi('tutorial05_2')
 
 # Deploy the first contract
 contract1 = ts4.BaseContract('tutorial05_1', dict(code = code, data = data), nickname = 'contract1')
@@ -42,12 +45,13 @@ contract1.call_method('deploy', dict(key = 123))
 # Fetch the address of the contract to be deployed
 address2 = contract1.call_getter('m_address')
 
-print('Deployed at {}'.format(address2))
+print('Deploying at {}'.format(address2))
 
 # Dispatch unprocessed messages to actually construct a second contract
 ts4.dispatch_messages()
 
-# Create wrapper for already existing contract
+# At this point contract2 is deployed at a known address,
+# so we create a wrapper to access it.
 contract2 = ts4.BaseContract('tutorial05_2', ctor_params = None, address = address2)
 
 # Ensure the second contract has correct key and balance
