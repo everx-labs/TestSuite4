@@ -1,0 +1,33 @@
+{
+	"ABI version": 2,
+	"header": ["pubkey", "time"],
+	"functions": [
+		{
+			"name": "setNumber",
+			"inputs": [
+				{"name":"value","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_number",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_number","type":"uint256"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}

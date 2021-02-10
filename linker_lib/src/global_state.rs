@@ -9,22 +9,14 @@
 
 use std::sync::Mutex;
 use std::collections::HashMap;
-// use std::collections::HashSet;
-
-use serde_json::Value as JsonValue;
 
 use ton_block::{
-    Message as TonBlockMessage,
-    MsgAddressInt, CommonMsgInfo, StateInit,
+    MsgAddressInt, StateInit,
 };
 
 use ton_types::{
-    SliceData, BuilderData, Cell, HashmapE, IBitstring,
+    BuilderData, Cell, HashmapE, IBitstring,
     HashmapType,
-};
-
-use ton_abi::json_abi::{
-    decode_unknown_function_call,
 };
 
 use crate::util::{
@@ -36,7 +28,11 @@ use crate::call_contract::{
 };
 
 use crate::abi::{
-    AbiInfo,
+    AbiInfo, AllAbis,
+};
+
+use crate::messages::{
+    MessageInfo, MessageStorage,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -44,8 +40,9 @@ use crate::abi::{
 #[derive(Default)]
 pub struct GlobalState {
     contracts: HashMap<MsgAddressInt, ContractInfo>,
-    // all_abis: HashSet<String>,
-    pub messages: Vec<MessageInfo>,
+    pub dummy_balances: HashMap<MsgAddressInt, u64>,
+    pub all_abis: AllAbis,
+    pub messages: MessageStorage,
     pub trace: bool,
     pub config_params: HashMap<u32, Cell>,
     now: Option<u64>,
@@ -62,7 +59,7 @@ pub struct ContractInfo {
     name: String,
     addr: MsgAddressInt,
     state_init: StateInit,
-    abi_str: String,
+    abi_info: AbiInfo,
     balance: u64,
 }
 
@@ -72,14 +69,14 @@ impl ContractInfo {
         address: MsgAddressInt,
         contract_name: Option<String>,
         state_init: StateInit,
-        abi_str: String,
+        abi_info: AbiInfo,
         balance: u64,
     ) -> ContractInfo {
         ContractInfo {
             addr: address,
             name: contract_name.unwrap_or("n/a".to_string()),
             state_init: state_init,
-            abi_str: abi_str,
+            abi_info: abi_info,
             balance: balance,
         }
     }
@@ -87,11 +84,12 @@ impl ContractInfo {
         &self.addr
     }
 
-    pub fn abi_str(&self) -> &String {
-        &self.abi_str
+    pub fn abi_info(&self) -> &AbiInfo {
+        &self.abi_info
     }
+
     pub fn set_abi(&mut self, abi: AbiInfo) {
-        self.abi_str = abi.text;
+        self.abi_info = abi;
     }
     pub fn debug_info_filename(&self) -> String {
         format!("{}{}", self.name.trim_end_matches("tvc"), "debug.json")
@@ -110,62 +108,30 @@ impl ContractInfo {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct MessageInfo {
-    message_id: u32,
-    pub ton_msg: TonBlockMessage,
-    pub json: JsonValue,
-}
-
 impl GlobalState {
     pub fn set_contract(&mut self, address: MsgAddressInt, info: ContractInfo) {
         assert!(address == *info.address());
+        self.all_abis.register_abi(info.abi_info().clone());
         self.contracts.insert(address, info);
     }
     pub fn address_exists(&self, address: &MsgAddressInt) -> bool {
         self.contracts.contains_key(&address)
     }
-    pub fn get_message(&self, id: u32) -> &MessageInfo {
-        &self.messages[id as usize]
-    }
-    pub fn get_contract(&self, address: &MsgAddressInt) -> ContractInfo {
-        // TODO: return an error in case of contact absense
+    pub fn get_contract(&self, address: &MsgAddressInt) -> Option<ContractInfo> {
         let state = self.contracts.get(&address);
-        if state.is_none() {
-            println!("Wrong contract address: {:?}\n", &address);
-            assert!(state.is_some());
-        }
-        let info = state.unwrap();
-        (*info).clone()
+        state.map(|info| (*info).clone())
     }
-    pub fn add_message(&mut self, msg_info: MessageInfo) -> MessageInfo {
-        let mut msg_info = msg_info;
-        msg_info.set_id(self.messages.len() as u32);
-        self.messages.push(msg_info.clone());
-        msg_info
+    pub fn add_messages(&mut self, msgs: Vec<MessageInfo>) -> Vec<String> {
+        let msgs = msgs.into_iter().map(|msg| self.messages.add(msg)).collect();
+        messages_to_out_actions(msgs)
     }
-    pub fn add_messages(&mut self, msgs: Vec<MessageInfo>) -> Vec<MessageInfo> {
-        msgs.into_iter().map(|msg| self.add_message(msg)).collect()
-    }
-    pub fn decode_function_call(&self, body: &SliceData, internal: bool) -> Option<ton_abi::DecodedMessage> {
-        for contract in self.contracts.values() {
-            // println!("contract: {}", &contract.name);
-            let abi_str = contract.abi_str.clone();
-            // TODO: move to abi.rs...
-            let res = decode_unknown_function_call(abi_str, body.clone(), internal);
-            if let Ok(res) = res {
-                return Some(res);
-            }
-        }
-        None
-    }
+
     pub fn get_now(&self) -> u64 {
         self.now.unwrap_or(get_now())
     }
     pub fn make_time_header(&mut self) -> Option<String> {
         if self.now.is_none() {
             // Add sleep to avoid Replay Protection Error issue
-            // TODO: investigate if it slows down tests or not
             std::thread::sleep(std::time::Duration::from_millis(1));
         }
         self.now.map(|v| {
@@ -183,40 +149,6 @@ impl GlobalState {
     }
 }
 
-impl MessageInfo {
-    pub fn create(ton_msg: TonBlockMessage, json: JsonValue) -> MessageInfo {
-        MessageInfo {message_id: 0, ton_msg: ton_msg, json: json}
-    }
-
-    fn extended_json(&self) -> JsonValue {
-        let mut j = self.json.clone();
-        j["id"] = JsonValue::from(self.message_id);
-        let hdr = self.ton_msg.header();
-        if let CommonMsgInfo::IntMsgInfo(header) = hdr {
-            j["src"] = JsonValue::from(format!("{}", header.src));
-            j["dst"] = JsonValue::from(format!("{}", header.dst));
-        }
-        if let CommonMsgInfo::ExtInMsgInfo(header) = hdr {
-            j["dst"] = JsonValue::from(format!("{}", header.dst));
-        }
-        if let CommonMsgInfo::ExtOutMsgInfo(header) = hdr {
-            j["src"] = JsonValue::from(format!("{}", header.src));
-            j["dst"] = JsonValue::from(format!("{}", header.dst));
-        }
-        j
-    }
-
-    pub fn set_id(&mut self, id: u32) {
-        assert!(self.message_id == 0);
-        self.message_id = id;
-        self.json = self.extended_json();
-    }
-
-    pub fn value(&self) -> u64 {
-        self.json["value"].as_u64().unwrap()
-    }
-}
-
 pub fn make_config_params(gs: &GlobalState) -> Option<Cell> {
     let mut map = HashmapE::with_hashmap(32, None);
     for (key, value) in gs.config_params.clone() {
@@ -226,5 +158,9 @@ pub fn make_config_params(gs: &GlobalState) -> Option<Cell> {
         map.setref(key, &value).unwrap();
     }
     map.data().map(|v| v.clone())
+}
+
+fn messages_to_out_actions(msgs: Vec<MessageInfo>) -> Vec<String> {
+    msgs.iter().map(|msg| msg.json_str()).collect()
 }
 

@@ -7,14 +7,21 @@
     Copyright 2019-2021 (c) TON LABS
 """
 
+'''
+
+    This tutorial demonstrates the different variants for working with the constructor.
+
+'''
+
+
 import sys
 sys.path.append('../ts4_py_lib')
-import ts4lib as ts4  # noqa: E402
-from ts4lib import eq  # noqa: E402
+import ts4
+from ts4 import eq  # noqa: E402
 
 
 def test1():
-    # Deploy a contract
+    # Deploy a contract. Constructor is called automatically.
     tut = ts4.BaseContract('tutorial03_1', {})
 
     # Call a getter and ensure that we received correct integer value
@@ -25,9 +32,10 @@ def test1():
 def test2():
     t_number = 12648430
 
-    # Deploy a contract without constructing
+    # Deploy a contract without construction
     tut = ts4.BaseContract('tutorial03_2', ctor_params = None)
-    #   and call constructor
+
+    # And construct it manually with an external message
     tut.call_method('constructor', {'t_number': t_number})
 
     # Call a getter and ensure that we received correct integer value
@@ -37,7 +45,7 @@ def test2():
 def test3():
     t_number = 3054
 
-    # Deploy a contract with calling constructor
+    # Deploy a contract with calling constructor (offchain)
     tut = ts4.BaseContract('tutorial03_2', ctor_params = {'t_number': t_number})
 
     # Call a getter and ensure that we received correct integer value
@@ -45,12 +53,17 @@ def test3():
 
 
 def test4():
-    (secret_key, public_key) = ts4.make_keypair()
+    (private_key, public_key) = ts4.make_keypair()
     t_number = 14613198
 
-    # Deploy a contract with given (by pubkey) owner
-    tut = ts4.BaseContract('tutorial03_3', ctor_params = None, pubkey = public_key)
-    tut.call_method('constructor', {'t_number': t_number}, secret_key)
+    # Deploy a contract with given (by pubkey) owner.
+    # Private key is needed here only when constructor checks 
+    # that message is signed.
+    tut = ts4.BaseContract('tutorial03_3', 
+        ctor_params = dict(t_number = t_number), 
+        pubkey      = public_key, 
+        private_key = private_key
+    )
 
     assert eq(t_number, tut.call_getter('m_number'))
 

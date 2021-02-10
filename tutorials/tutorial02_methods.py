@@ -7,10 +7,19 @@
     Copyright 2019-2021 (c) TON LABS
 """
 
+'''
+
+    This tutorial demonstrates how to work with external methods 
+    for passing various types of parameters (number, address, bool, bytes,
+    string, array, struct).
+
+'''
+
+
 import sys
 sys.path.append('../ts4_py_lib')
-import ts4lib as ts4  # noqa: E402
-from ts4lib import eq  # noqa: E402
+import ts4
+from ts4 import eq  # noqa: E402
 
 
 def test1():
@@ -35,6 +44,13 @@ def test1():
     # Call the getter and ensure that we received correct boolean value
     assert eq(t_bool, tut02.call_getter('m_bool'))
 
+    # In ABI bytes types is represented as a hex string
+    t_bytes = "01020304"
+    # Call method to set bytes value
+    tut02.call_method('set_bytes', {'value': t_bytes})
+    # Call the getter and ensure that we received correct bytes value
+    assert eq(t_bytes, tut02.call_getter('m_bytes'))
+
     # A Solidity contracts requires that string values be passed as a hex
     t_string = 'coffee'
     # Call method to set string value. We need to use `str2bytes` helper for strings
@@ -48,6 +64,16 @@ def test1():
     tut02.call_method('set_array', {'value': t_array})
     # Call the getter and ensure that we received correct array
     assert eq(t_array, tut02.call_getter('m_array'))
+
+    t_struct = dict(
+        s_number = t_number,
+        s_address = t_address,
+        s_array = t_array
+    )
+    # Call method to set struct
+    tut02.call_method('set_struct', {'someStruct': t_struct})
+    # Call the getter and ensure that we received correct value of the struct components
+    assert eq(t_struct, tut02.call_getter('get_struct'))
 
 
 # Set a directory where the artifacts of the used contracts are located

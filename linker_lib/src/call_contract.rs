@@ -13,7 +13,7 @@ use serde::{Serialize};
 
 use ton_block::{
     CurrencyCollection, Deserializable,
-    Message as TonBlockMessage,
+    // Message as TonBlockMessage,
     MsgAddressInt,
     OutAction, OutActions,
     Serializable, StateInit,
@@ -35,7 +35,7 @@ use ton_vm::executor::{
 };
 
 use crate::global_state::{
-    GlobalState, MessageInfo, ContractInfo,
+    GlobalState, ContractInfo,
 };
 
 use crate::util::{
@@ -46,8 +46,16 @@ use crate::debug_info::{
     load_debug_info, ContractDebugInfo
 };
 
+use crate::abi::{
+    AbiInfo
+};
+
+use crate::messages::{
+    MessageInfo, MessageInfo2,
+};
+
 use crate::{
-    make_message_json,
+    decode_message,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,11 +69,14 @@ pub struct ExecutionResult {
 #[derive(Clone, Debug, Serialize)]
 pub struct ExecutionResultInfo {
     pub run_id: Option<u32>,
-    pub address: String, // TODO: Option<MsgAddressInt>,
+    pub address: String, // TODO: use Option<MsgAddressInt> but it cannot be serialized.
     pub inbound_msg_id: Option<u32>,
     pub exit_code: i32,
     pub gas: i64,
 }
+
+// impl serde::Serialize for MsgAddressInt {
+// }
 
 #[derive(Clone, Debug)]
 pub struct ExecutionResultEx {
@@ -75,20 +86,23 @@ pub struct ExecutionResultEx {
 
 pub fn call_contract_ex(
     contract_info: &ContractInfo,
-    msg: Option<TonBlockMessage>,
-    msg_value: Option<u64>,
+    msg_info: &MessageInfo2,
     debug: bool,
     config_params: Option<Cell>,
     now: u64,
-    ticktock: Option<i8>,
 ) -> ExecutionResult {
+
+    let msg = &msg_info.msg;
+    let msg_value = &msg_info.value;
+    let ticktock = &msg_info.ticktock;
+
     let addr = contract_info.address();
     let state_init = contract_info.state_init();
     let smc_balance = contract_info.balance();
     let debug_info_filename = contract_info.debug_info_filename();
 
     let (func_selector, value) = match msg_value {
-        Some(value) => (0, value),
+        Some(value) => (0, *value),
         None => (if ticktock.is_some() { -2 } else { -1 }, 0)
     };
 
@@ -104,7 +118,7 @@ pub fn call_contract_ex(
 
     let mut stack = Stack::new();
     if func_selector > -2 {
-        let msg = msg.unwrap();
+        let msg = msg.as_ref().unwrap();
         let msg_cell = StackItem::Cell(msg.clone().write_to_new_cell().unwrap().into());
 
         let body: SliceData = match msg.body() {
@@ -136,7 +150,9 @@ pub fn call_contract_ex(
     let exit_code = match engine.execute() {
         Err(exc) => match tvm_exception(exc) {
             Ok(exc) => {
-                println!("Unhandled exception: {}", exc);
+                if debug {
+                    println!("Unhandled exception: {}", exc);
+                }
                 exc.exception_or_custom_code()
             }
             _ => -1
@@ -153,7 +169,7 @@ pub fn call_contract_ex(
     }
 
     let mut state_init = state_init.clone();
-    // TODO: Add test with COMMIT and failure...
+    // TODO: Add test with COMMIT and failure... - task
     if exit_code == 0 || exit_code == 1 {
         state_init.data = match engine.get_committed_state().get_root() {
             StackItem::Cell(root_cell) => Some(root_cell),
@@ -261,7 +277,7 @@ pub fn process_actions(
     let address = contract_info.address().clone();  // TODO: get rid of clone
 
     let mut balance = contract_info.balance();
-    let abi_str = contract_info.abi_str();
+    let abi_info = contract_info.abi_info();
 
     let mut msgs = vec![];
     let mut code = None;
@@ -270,13 +286,13 @@ pub fn process_actions(
     let info_ex = &result.info_ex;
 
     for act in &info_ex.out_actions {
-        // TODO: refactor it - remove mut params...
-        if let Some(msg_info2) = process_action(
-                 gs, act, &address, &mut balance, method.clone(),
-            &abi_str.to_owned(), &mut message_value,
+        // TODO!: refactor it - remove mut params...
+        if let Some(msg_info) = process_action(
+                 gs, act, &address, &mut balance, &method,
+            &abi_info, &mut message_value,
             &mut reserved_balance, &mut code,
         ) {
-            msgs.push(msg_info2);
+            msgs.push(msg_info);
         }
     }
 
@@ -296,12 +312,13 @@ fn process_action(
     action: &OutAction,
     address: &MsgAddressInt,
     balance: &mut u64,
-    method: Option<String>,
-    abi_str: &String,
+    method: &Option<String>,
+    abi_info: &AbiInfo,
     message_value: &mut u64,
     reserved_balance: &mut u64,
     code: &mut Option<Cell>,
 ) -> Option<MessageInfo> {
+    // TODO!: refactor this function! Too many parameters
     // TODO: remove .clone()
     match action.clone() {
         OutAction::SendMsg{ mode, out_msg } => {
@@ -336,7 +353,8 @@ fn process_action(
 
             let out_msg = substitute_address(out_msg, &address);
 
-            let j = make_message_json(&gs, &abi_str, method.clone(), &out_msg, additional_value);
+            // TODO: is this code needed here? Should it be moved?
+            let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value);
             let msg_info2 = MessageInfo::create(out_msg, j);
 
             return Some(msg_info2);
@@ -359,7 +377,7 @@ fn process_action(
                     println!("reserving balance {}", *reserved_balance);
                 }
             } else if mode == 4 {
-                let orig_balance = gs.get_contract(&address).balance();
+                let orig_balance = gs.get_contract(&address).unwrap().balance();
                 *reserved_balance = orig_balance + bigint_to_u64(&value.grams.value());
             } else {
                 println!("OutAction::ReserveCurrency - Unsupported mode {}", mode);
