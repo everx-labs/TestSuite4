@@ -7,7 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 use ton_block::{
@@ -32,7 +32,11 @@ use crate::abi::{
 };
 
 use crate::messages::{
-    MessageInfo, MessageStorage,
+    MsgInfo, MessageStorage,
+};
+
+use crate::debug_info::{
+    TraceStepInfo,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -44,6 +48,8 @@ pub struct GlobalState {
     pub all_abis: AllAbis,
     pub messages: MessageStorage,
     pub trace: bool,
+    pub trace_on: bool,
+    pub last_trace: Option<Vec<TraceStepInfo>>,
     pub config_params: HashMap<u32, Cell>,
     now: Option<u64>,
     now2: u64,
@@ -100,6 +106,13 @@ impl ContractInfo {
     pub fn set_balance(&mut self, balance: u64) {
         self.balance = balance;
     }
+    pub fn change_balance(&mut self, sign: i64, diff: u64) {
+        self.balance = if sign < 0 {
+            self.balance - diff
+        } else {
+            self.balance + diff
+        }
+    }
     pub fn state_init(&self) -> &StateInit {
         &self.state_init
     }
@@ -109,26 +122,33 @@ impl ContractInfo {
 }
 
 impl GlobalState {
+
     pub fn set_contract(&mut self, address: MsgAddressInt, info: ContractInfo) {
         assert!(address == *info.address());
         self.all_abis.register_abi(info.abi_info().clone());
         self.contracts.insert(address, info);
+
     }
     pub fn address_exists(&self, address: &MsgAddressInt) -> bool {
         self.contracts.contains_key(&address)
+
     }
     pub fn get_contract(&self, address: &MsgAddressInt) -> Option<ContractInfo> {
         let state = self.contracts.get(&address);
         state.map(|info| (*info).clone())
     }
-    pub fn add_messages(&mut self, msgs: Vec<MessageInfo>) -> Vec<String> {
-        let msgs = msgs.into_iter().map(|msg| self.messages.add(msg)).collect();
-        messages_to_out_actions(msgs)
+
+    pub fn add_messages(&mut self, msgs: Vec<MsgInfo>) -> Vec<String> {
+        let msgs = msgs.into_iter().map(|msg|
+            self.messages.add(msg)
+        ).collect();
+        messages_to_out_actions(msgs)       // TODO: refactor
     }
 
     pub fn get_now(&self) -> u64 {
         self.now.unwrap_or(get_now())
     }
+
     pub fn make_time_header(&mut self) -> Option<String> {
         if self.now.is_none() {
             // Add sleep to avoid Replay Protection Error issue
@@ -139,14 +159,22 @@ impl GlobalState {
             format!("{{\"time\": {}}}", v*1000 + self.now2)
         })
     }
+
     pub fn set_now(&mut self, now: u64) {
         self.now  = Some(now);
         self.now2 = 0;
     }
+
     pub fn register_run_result(&mut self, mut result: ExecutionResultInfo) {
         result.run_id = Some(self.runs.len() as u32);
         self.runs.push(result);
     }
+
+    pub fn log_str(&mut self, text: String) {
+        let msg_info = MsgInfo::with_log_str(text, self.get_now());
+        self.messages.add(msg_info);
+    }
+
 }
 
 pub fn make_config_params(gs: &GlobalState) -> Option<Cell> {
@@ -160,7 +188,7 @@ pub fn make_config_params(gs: &GlobalState) -> Option<Cell> {
     map.data().map(|v| v.clone())
 }
 
-fn messages_to_out_actions(msgs: Vec<MessageInfo>) -> Vec<String> {
+fn messages_to_out_actions(msgs: Vec<Arc<MsgInfo>>) -> Vec<String> {
     msgs.iter().map(|msg| msg.json_str()).collect()
 }
 

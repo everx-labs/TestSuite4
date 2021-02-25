@@ -7,10 +7,11 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-pragma solidity >=0.6.0;
+pragma ton-solidity >=0.30.0;
 
 contract ContractTransfer {
     function send_grams(address addr, uint64 amount, bool bounce) pure public {
+        tvm.accept();
         addr.transfer(amount, bounce);
     }
 

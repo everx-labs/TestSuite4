@@ -15,10 +15,9 @@
 '''
 
 
-import sys
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq
+import tonos_ts4.ts4 as ts4
+
+eq = ts4.eq
 
 
 class Tut06(ts4.BaseContract):
@@ -46,11 +45,12 @@ ts4.set_verbose(True)
 tut06 = Tut06()
 
 t_number = 123
+
 # Call the unsigned method and expect an error because
 # the owner's key is not specified and its validation failed
 tut06.setNumber(t_number, expect_ec = 101)
 
-# Check that the value has not changed
+# Check that the value has not been changed
 assert eq(0, tut06.call_getter('m_number'))
 
 # Сall the method by message that signed with owner key
@@ -62,8 +62,10 @@ assert eq(t_number, tut06.call_getter('m_number'))
 # Set a new keypair in the contract that is different
 # from the one that the contract was deployed with
 tut06.create_keypair()
+
 # Сall the method by message that signed with foreign key
 # and expect an error because the owner's key validation failed
 tut06.setNumber_signed(t_number * 2, expect_ec = 101)
+
 # Check that the value has not changed
 assert eq(t_number, tut06.call_getter('m_number'))

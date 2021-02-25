@@ -14,10 +14,9 @@
 '''
 
 
-import sys
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq  # noqa: E402
+import tonos_ts4.ts4 as ts4
+
+eq = ts4.eq
 
 
 def test1():

@@ -34,7 +34,7 @@ use crate::global_state::{
 };
 
 use crate::messages::{
-    DecodedMessageInfo,
+    MsgAbiInfo,
 };
 
 #[derive(Default)]
@@ -96,7 +96,7 @@ pub fn decode_body(
     abi_info: &AbiInfo,
     method: Option<String>,
     out_msg: &TonBlockMessage,
-) -> DecodedMessageInfo {
+) -> MsgAbiInfo {
 
     let internal = out_msg.is_internal();
     let body = out_msg.body();
@@ -108,7 +108,7 @@ pub fn decode_body(
     }
 
     if body.is_none() {
-        return DecodedMessageInfo::create_empty();
+        return MsgAbiInfo::create_empty();
     }
     let body = body.unwrap();
 
@@ -123,23 +123,23 @@ pub fn decode_body(
             internal
         );
         if let Ok(s) = s {
-            return DecodedMessageInfo::create_answer(s, method);
+            return MsgAbiInfo::create_answer(s, method);
         }
     }
 
     // Check for a call to a remote method
     if let Some(res) = gs.all_abis.decode_function_call(&body, internal) {
         // println!(">> {} {}", res.function_name, res.params);
-        return DecodedMessageInfo::create_call(res.params, res.function_name);
+        return MsgAbiInfo::create_call(res.params, res.function_name);
     }
 
     // Check for event
     let s = decode_unknown_function_response(abi_str.clone(), body.clone(), internal);
     if let Ok(s) = s {
-        return DecodedMessageInfo::create_event(s.params, s.function_name);
+        return MsgAbiInfo::create_event(s.params, s.function_name);
     }
 
-    return DecodedMessageInfo::create_unknown();
+    return MsgAbiInfo::create_unknown();
 }
 
 pub fn build_abi_body(

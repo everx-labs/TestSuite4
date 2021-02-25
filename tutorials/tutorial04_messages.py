@@ -15,10 +15,9 @@
 '''
 
 
-import sys
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq  # noqa: E402
+import tonos_ts4.ts4 as ts4
+
+eq = ts4.eq
 
 
 def test1():
@@ -30,37 +29,38 @@ def test1():
 
     # Get internal message that was created by previous call
     msg_ping = ts4.peek_msg()
-    assert eq(neighbor1, msg_ping['src'])
-    assert eq(neighbor2, msg_ping['dst'])
-    assert eq('ping', msg_ping['method'])
-    assert eq(t_value, int(msg_ping['params']['request']))
+    print(msg_ping)
+    assert eq(neighbor1, msg_ping.src)
+    assert eq(neighbor2, msg_ping.dst)
+    assert msg_ping.is_call('ping')
+    assert eq(t_value, int(msg_ping.params['request']))
 
     # Dispatch created message
     ts4.dispatch_one_message()
 
     # Pick up event that was created by called method of the callee contract
     msg_event1 = ts4.pop_event()
-    assert eq(neighbor2, msg_event1['src'])
-    assert eq('', msg_event1['dst'])
-    assert eq('ReceivedRequest', msg_event1['event'])
-    assert eq(t_value, int(msg_event1['params']['request']))
+    # Ensure that dst address is empty
+    assert msg_event1.dst.empty()
+    assert msg_event1.is_event('ReceivedRequest', neighbor2)
+    assert eq(t_value, int(msg_event1.params['request']))
 
     # Get internal message that was created by last call
     msg_pong = ts4.peek_msg()
-    assert eq(neighbor2, msg_pong['src'])
-    assert eq(neighbor1, msg_pong['dst'])
-    assert eq('pong', msg_pong['method'])
-    assert eq(t_value, int(msg_pong['params']['reply']))
+    assert eq(neighbor2, msg_pong.src)
+    assert eq(neighbor1, msg_pong.dst)
+    assert msg_pong.is_call('pong')
+    assert eq(t_value, int(msg_pong.params['reply']))
 
     # Dispatch next message
     ts4.dispatch_one_message()
 
     # Pick up last event
     msg_event2 = ts4.pop_event()
-    assert eq(neighbor1, msg_event2['src'])
-    assert eq('', msg_event2['dst'])
-    assert eq('ReceivedReply', msg_event2['event'])
-    assert eq(t_value, int(msg_event2['params']['reply']))
+    # Ensure that dst address is empty (other variant)
+    assert eq(ts4.Address(None), msg_event2.dst)
+    assert msg_event2.is_event('ReceivedReply', neighbor1)
+    assert eq(t_value, int(msg_event2.params['reply']))
 
 
 def test2():
@@ -79,10 +79,10 @@ def test2():
 
     # Processing last event
     msg_event = ts4.pop_event()
-    assert eq(neighbor1, msg_event['src'])
-    assert eq('', msg_event['dst'])
-    assert eq('ReceivedReply', msg_event['event'])
-    assert eq(t_value, int(msg_event['params']['reply']))
+    # Ensure that dst address is empty (one more variant)
+    assert eq(ts4.Address(''), msg_event.dst)
+    assert msg_event.is_event('ReceivedReply', neighbor1)
+    assert eq(t_value, int(msg_event.params['reply']))
 
 
 # Set a directory where the artifacts of the used contracts are located
@@ -93,9 +93,13 @@ ts4.set_verbose(True)
 
 # Deploy contracts
 contract1 = ts4.BaseContract('tutorial04_1', {})
-neighbor1 = contract1.address()
+neighbor1 = contract1.addr()
 contract2 = ts4.BaseContract('tutorial04_2', {})
-neighbor2 = contract2.address()
+neighbor2 = contract2.addr()
+
+# Register nicknames to be used in the output
+ts4.register_nickname(neighbor1, 'Alice')
+ts4.register_nickname(neighbor2, 'Bob')
 
 print('Contract 1 deployed at {}'.format(neighbor1))
 print('Contract 2 deployed at {}'.format(neighbor2))

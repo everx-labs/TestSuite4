@@ -7,7 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-pragma solidity >=0.6.0;
+pragma ton-solidity >=0.30.0;
 
 import "tutorial05_2.sol";
 
@@ -18,12 +18,14 @@ contract Tutorial05_1 {
     address public m_address;
 
     constructor (TvmCell code, TvmCell data) public {
+        tvm.accept();
         // Save the code of second contract
         m_code = code;
         m_data = data;
     }
 
     function deploy(uint key) public {
+        tvm.accept();
         // Create StateInit for the contract to be deployed
         TvmCell stateInit = tvm.buildStateInit(m_code, m_data);
 

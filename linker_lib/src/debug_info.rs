@@ -12,10 +12,19 @@ use std::collections::HashMap;
 use ton_types::dictionary::HashmapE;
 use serde::{Deserialize, Serialize};
 use ton_block::{Serializable, StateInit};
-use ton_types::{UInt256, Cell};
+
+use ton_types::{
+    UInt256, Cell, SliceData, 
+};
+
+use ton_vm::executor::{
+    EngineTraceInfo, 
+};
+
+
 
 pub struct ContractDebugInfo {
-    pub hash2function: HashMap<UInt256, String>
+    hash2function: HashMap<UInt256, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -31,12 +40,43 @@ pub struct DebugInfo {
     pub privates: Vec<DebugInfoFunction>,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct TraceStepInfo {
+    pub id: u32,
+    pub cmd: String,
+    pub gas: i64,
+    pub func: Option<String>,
+    pub stack: Vec<String>,
+}
+
+
 impl DebugInfo {
     pub fn _new() -> Self {
         DebugInfo { internals: vec![], publics: vec![], privates: vec![] }
     }
 }
 
+impl ContractDebugInfo {
+    pub fn find_function(&self, cmd_code: &SliceData) -> Option<&String> {
+        self.hash2function.get(&cmd_code.cell().repr_hash())
+    }
+}
+
+impl TraceStepInfo {
+    #[allow(dead_code)]
+    pub fn from(info: &EngineTraceInfo, fname: Option<String>) -> TraceStepInfo {
+        let stack = info.stack.iter().map(
+            |x| format!("{}", x)
+        ).collect();
+        TraceStepInfo {
+            id: info.step,
+            cmd: info.cmd_str.clone(),
+            gas: info.gas_cmd,
+            func: fname,
+            stack: stack,
+        }
+    }
+}
 
 pub fn _save_debug_info(
     info: DebugInfo,
@@ -122,6 +162,7 @@ pub fn load_debug_info(
     Some(ContractDebugInfo{hash2function: hash2function})
 }
 
+// TODO: make member
 fn set_function_hashes(
     mut hash2function: &mut HashMap<UInt256, String>,
     fname: &String,
@@ -133,3 +174,17 @@ fn set_function_hashes(
         set_function_hashes(&mut hash2function, fname, &cell.reference(i).unwrap());
     }
 }
+
+pub fn get_function_name(
+    debug_info: &Option<ContractDebugInfo>,
+    cmd_code: &SliceData,
+) -> Option<String> {
+    if let Some(debug_info) = debug_info {
+        debug_info
+            .find_function(&cmd_code)
+            .map(|fname| fname.clone())
+    } else {
+        None
+    }
+}
+

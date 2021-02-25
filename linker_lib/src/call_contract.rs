@@ -7,13 +7,14 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use serde::{Serialize};
+use serde::{
+    Serialize,
+};
 
 use ton_block::{
     CurrencyCollection, Deserializable,
-    // Message as TonBlockMessage,
     MsgAddressInt,
     OutAction, OutActions,
     Serializable, StateInit,
@@ -31,7 +32,7 @@ use ton_vm::error::tvm_exception;
 use ton_vm::SmartContractInfo;
 
 use ton_vm::executor::{
-    Engine, EngineTraceInfo, gas::gas_state::Gas
+    Engine, EngineTraceInfo, EngineTraceInfoType, gas::gas_state::Gas
 };
 
 use crate::global_state::{
@@ -43,7 +44,8 @@ use crate::util::{
 };
 
 use crate::debug_info::{
-    load_debug_info, ContractDebugInfo
+    load_debug_info, ContractDebugInfo, TraceStepInfo,
+    get_function_name,
 };
 
 use crate::abi::{
@@ -51,10 +53,11 @@ use crate::abi::{
 };
 
 use crate::messages::{
-    MessageInfo, MessageInfo2,
+    AddressWrapper,
+    MsgInfo, MessageInfo2,
 };
 
-use crate::{
+use crate::exec::{
     decode_message,
 };
 
@@ -64,19 +67,20 @@ use crate::{
 pub struct ExecutionResult {
     pub info: ExecutionResultInfo,
     pub info_ex: ExecutionResultEx,
+    pub info_msg: Option<String>,
+    pub trace: Option<Vec<TraceStepInfo>>,
 }
+
+// TODO: unify these structures. Or give better names
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ExecutionResultInfo {
     pub run_id: Option<u32>,
-    pub address: String, // TODO: use Option<MsgAddressInt> but it cannot be serialized.
+    pub address: AddressWrapper,
     pub inbound_msg_id: Option<u32>,
     pub exit_code: i32,
     pub gas: i64,
 }
-
-// impl serde::Serialize for MsgAddressInt {
-// }
 
 #[derive(Clone, Debug)]
 pub struct ExecutionResultEx {
@@ -88,23 +92,37 @@ pub fn call_contract_ex(
     contract_info: &ContractInfo,
     msg_info: &MessageInfo2,
     debug: bool,
+    trace2: bool,
     config_params: Option<Cell>,
     now: u64,
 ) -> ExecutionResult {
 
-    let msg = &msg_info.msg;
-    let msg_value = &msg_info.value;
-    let ticktock = &msg_info.ticktock;
+    if debug {
+        println!("call_contract_ex");
+    }
 
-    let addr = contract_info.address();
-    let state_init = contract_info.state_init();
-    let smc_balance = contract_info.balance();
+    // TODO: Too long function
+
+    let msg_value = msg_info.value();
+    let ticktock  = &msg_info.ticktock;
+
+    let addr                = contract_info.address();
+    let state_init          = contract_info.state_init();
+    let contract_balance    = contract_info.balance();
     let debug_info_filename = contract_info.debug_info_filename();
 
-    let (func_selector, value) = match msg_value {
-        Some(value) => (0, *value),
-        None => (if ticktock.is_some() { -2 } else { -1 }, 0)
-    };
+    //  0   - internal msg
+    // -1   - external msg
+    // -2   - tick-tock
+    // -3   - Split Prepare Transaction
+    // -4   - Merge Transaction
+
+    let func_selector =
+        if ticktock.is_some() { -2 } else {
+            if msg_value.is_some() { 0 } else { -1 }
+        };
+
+    let value = msg_value.unwrap_or(0);
 
     let (code, data) = load_code_and_data(&state_init);
 
@@ -112,13 +130,13 @@ pub fn call_contract_ex(
         data,
         addr,
         now,
-        (smc_balance, CurrencyCollection::with_grams(smc_balance)),
+        (contract_balance, CurrencyCollection::with_grams(contract_balance)),
         config_params,
     );
 
     let mut stack = Stack::new();
-    if func_selector > -2 {
-        let msg = msg.as_ref().unwrap();
+    if func_selector > -2 {     // internal or external
+        let msg = msg_info.ton_msg().unwrap();
         let msg_cell = StackItem::Cell(msg.clone().write_to_new_cell().unwrap().into());
 
         let body: SliceData = match msg.body() {
@@ -127,26 +145,41 @@ pub fn call_contract_ex(
         };
 
         stack
-            .push(int!(smc_balance))
+            .push(int!(contract_balance))
             .push(int!(value))              //msg balance
             .push(msg_cell)                 //msg
             .push(StackItem::Slice(body))   //msg.body
             .push(int!(func_selector));     //selector
     } else {
         stack
-            .push(int!(smc_balance))
+            .push(int!(contract_balance))
             // .push(StackItem::Integer(Arc::new(addr_int))) //contract address
             .push(int!(0)) // TODO: contract address
             .push(int!(ticktock.unwrap())) //tick or tock
             .push(int!(func_selector));
     }
 
-    let mut engine = Engine::new().setup(code, Some(registers), Some(stack), Some(Gas::test()));
-    // engine.set_trace(Engine::TRACE_ALL);
-    if debug {
-        let debug_info = load_debug_info(&state_init, debug_info_filename);
-        engine.set_trace_callback(move |engine, info| { trace_callback(engine, info, true, &debug_info); })
-    }
+    let gas = if msg_info.is_external_call() {
+        Gas::test_with_credit(10_000)
+    } else {
+        Gas::test()
+    };
+
+    let mut engine = Engine::new().setup(code, Some(registers), Some(stack), Some(gas));
+
+    let debug_info = if debug {
+        load_debug_info(&state_init, debug_info_filename)
+    } else {
+        None
+    };
+
+    let trace = Arc::new(Mutex::new(vec![]));
+    let trace1 = trace.clone();
+
+    engine.set_trace_callback(move |engine, info| {
+        trace_callback(engine, info, debug, trace2, true, &debug_info, &mut trace.clone().lock().unwrap());
+    });
+
     let exit_code = match engine.execute() {
         Err(exc) => match tvm_exception(exc) {
             Ok(exc) => {
@@ -159,7 +192,11 @@ pub fn call_contract_ex(
         }
         Ok(code) => code as i32
     };
+
+    let trace: Vec<TraceStepInfo> = trace1.lock().unwrap().clone();
+
     let gas_usage = engine.get_gas().get_gas_used();
+
     if debug {
         println!("TVM terminated with exit code {}", exit_code);
         println!("Gas used: {}", gas_usage);
@@ -168,19 +205,36 @@ pub fn call_contract_ex(
         println!("{}", engine.dump_ctrls(false));
     }
 
+    let gas_credit = engine.get_gas().get_gas_credit();
+
+    if debug {
+        println!("credit = {}", gas_credit);
+    }
+
     let mut state_init = state_init.clone();
-    // TODO: Add test with COMMIT and failure... - task
-    if exit_code == 0 || exit_code == 1 {
-        state_init.data = match engine.get_committed_state().get_root() {
-            StackItem::Cell(root_cell) => Some(root_cell),
+    if gas_credit == 0 {
+        match engine.get_committed_state().get_root() {
+            StackItem::Cell(root_cell) => {
+                state_init.data = Some(root_cell);
+            },
+            StackItem::None => {
+                // do nothing
+            },
             _ => panic!("cannot get root data: c4 register is not a cell."),
         };
     }
 
-    let actions = if let StackItem::Cell(cell) = engine.get_actions() {
-        OutActions::construct_from(&mut cell.into()).unwrap()
+    let info_msg = if is_success_exit_code(exit_code) && gas_credit > 0 {
+        Some("no_accept".to_string())
     } else {
-        OutActions::default()
+        None
+    };
+
+    let actions = match engine.get_actions() {
+        StackItem::Cell(cell) =>
+            OutActions::construct_from(&mut cell.into()).unwrap(),
+        _ =>
+            OutActions::default(),
     };
 
     let info_ex = ExecutionResultEx {
@@ -190,15 +244,17 @@ pub fn call_contract_ex(
 
     let info = ExecutionResultInfo {
         run_id:         None,
-        address:        format!("{}", addr),
+        address:        AddressWrapper::with_int(addr.clone()),
         inbound_msg_id: None,
         exit_code:      exit_code,
         gas:            gas_usage,
     };
 
     ExecutionResult {
-        info:    info,
-        info_ex: info_ex,
+        info:     info,
+        info_ex:  info_ex,
+        info_msg: info_msg,
+        trace:    Some(trace),
     }
 }
 
@@ -234,36 +290,52 @@ fn initialize_registers(
     ctrls
 }
 
-fn trace_callback(_engine: &Engine, info: &EngineTraceInfo, extended: bool, debug_info: &Option<ContractDebugInfo>) {
-    println!("{}: {}",
-        info.step,
-        info.cmd_str
-    );
-    if extended {
-        println!("{} {}",
-            info.cmd_code.remaining_bits(),
-            info.cmd_code.to_hex_string()
+fn trace_callback(
+    _engine: &Engine,
+    info: &EngineTraceInfo,
+    trace: bool,
+    trace2: bool,
+    extended: bool,
+    debug_info: &Option<ContractDebugInfo>,
+    result: &mut Vec<TraceStepInfo>,
+) {
+
+    let fname = get_function_name(&debug_info, &info.cmd_code);
+
+    if trace2 {
+        let info2 = TraceStepInfo::from(&info, fname.clone());
+        result.push(info2);
+    }
+
+    if trace {
+        println!("{}: {}", info.step, info.cmd_str);
+
+        if extended {
+            println!("{} {}",
+                info.cmd_code.remaining_bits(),
+                info.cmd_code.to_hex_string()
+            );
+        }
+        println!("\nGas: {} ({})",
+            info.gas_used,
+            info.gas_cmd
         );
-    }
-    println!("\nGas: {} ({})",
-        info.gas_used,
-        info.gas_cmd
-    );
 
-    if let Some(debug_info) = debug_info {
-        // TODO: move
-        let fname = match debug_info.hash2function.get(&info.cmd_code.cell().repr_hash()) {
-            Some(fname) => fname,
-            None => "n/a"
-        };
-        println!("function: {}", fname);
+        if debug_info.is_some() {
+            let fname = fname.unwrap_or("n/a".to_string());
+            println!("function: {}", fname);
+        }
+
+        println!("\n--- Stack trace ------------------------");
+        for item in info.stack.iter() {
+            println!("{}", item);
+        }
+        println!("----------------------------------------\n");
     }
 
-    println!("\n--- Stack trace ------------------------");
-    for item in info.stack.iter() {
-        println!("{}", item);
+    if info.info_type == EngineTraceInfoType::Dump {
+        println!("logstr: {}", info.cmd_str);
     }
-    println!("----------------------------------------\n");
 }
 
 pub fn process_actions(
@@ -271,10 +343,12 @@ pub fn process_actions(
     mut contract_info: ContractInfo,
     result: &ExecutionResult,
     method: Option<String>,
-    mut message_value: u64,
-) -> Vec<MessageInfo> {
+    msg_value: Option<u64>,
+) -> Vec<MsgInfo> {
 
-    let address = contract_info.address().clone();  // TODO: get rid of clone
+    let mut msg_value = msg_value.unwrap_or_default();
+
+    let address: &MsgAddressInt = contract_info.address();
 
     let mut balance = contract_info.balance();
     let abi_info = contract_info.abi_info();
@@ -289,7 +363,7 @@ pub fn process_actions(
         // TODO!: refactor it - remove mut params...
         if let Some(msg_info) = process_action(
                  gs, act, &address, &mut balance, &method,
-            &abi_info, &mut message_value,
+            &abi_info, &mut msg_value,
             &mut reserved_balance, &mut code,
         ) {
             msgs.push(msg_info);
@@ -300,13 +374,17 @@ pub fn process_actions(
     if let Some(c) = code {
         state_init.set_code(c);
     }
+
+    let address = address.clone();
+
     contract_info.set_balance(balance);
     contract_info.set_state_init(state_init);
-    gs.set_contract(address.clone(), contract_info);
+    gs.set_contract(address, contract_info);
 
     msgs
 }
 
+// TODO!!: move to actions.rs
 fn process_action(
     gs: &GlobalState,
     action: &OutAction,
@@ -314,10 +392,10 @@ fn process_action(
     balance: &mut u64,
     method: &Option<String>,
     abi_info: &AbiInfo,
-    message_value: &mut u64,
+    msg_value: &mut u64,
     reserved_balance: &mut u64,
     code: &mut Option<Cell>,
-) -> Option<MessageInfo> {
+) -> Option<MsgInfo> {
     // TODO!: refactor this function! Too many parameters
     // TODO: remove .clone()
     match action.clone() {
@@ -327,7 +405,9 @@ fn process_action(
             }
             let error_str = "\n!!!!!!!!!!!! Message makes balance negative !!!!!!!!!!!!!\nBalance:   ".to_string();
             if let Some(value) = get_msg_value(&out_msg) {
+                // TODO!: refactor, handle error
                 if *balance < value {
+                    // TODO: add a test
                     println!("{}{b:>w1$}\nMsg value: {v:>w2$}\n", error_str, b = *balance, w1 = 19, v = value, w2 = 19);
                     assert!(*balance >= value);
                 }
@@ -336,13 +416,15 @@ fn process_action(
 
             let mut additional_value = 0;
             if mode == 64 {
-                if *balance < *message_value {
-                    println!("{}{b:>w1$}\nMsg value: {v:>w2$}\n", error_str, b = *balance, w1 = 19, v = *message_value, w2 = 19);
-                    assert!(*balance < *message_value);
+                // TODO!: refactor, handle error
+                if *balance < *msg_value {
+                    // TODO: add a test
+                    println!("{}{b:>w1$}\nMsg value: {v:>w2$}\n", error_str, b = *balance, w1 = 19, v = *msg_value, w2 = 19);
+                    assert!(*balance < *msg_value);
                 }
-                *balance -= *message_value;
-                additional_value = *message_value;
-                *message_value = 0;
+                *balance -= *msg_value;
+                additional_value = *msg_value;
+                *msg_value = 0;
             }
 
             if mode == 128 {
@@ -355,7 +437,7 @@ fn process_action(
 
             // TODO: is this code needed here? Should it be moved?
             let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value);
-            let msg_info2 = MessageInfo::create(out_msg, j);
+            let msg_info2 = MsgInfo::create(out_msg, j);
 
             return Some(msg_info2);
         },
@@ -389,5 +471,9 @@ fn process_action(
         _ => println!("Action(Unknown)"),
     };
     None
+}
+
+pub fn is_success_exit_code(exit_code: i32) -> bool {
+    exit_code == 0 || exit_code == 1
 }
 

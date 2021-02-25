@@ -1,9 +1,38 @@
 
+## 25-02-2021: TestSuite4 0.1.2
+
+### General
+
+- renamed `ts4_py_lib` to `tonos_ts4.ts4`
+- added ability to install TS4 from package (`pip install tonos-ts4`)
+- changed setup instructions for building TS4 from source.
+
+### Tutorials
+
+- added `tutorial10_encode_call` - encode a payload for use in a transfer function call
+- updated tutorials
+
+### Core Engine
+
+- added support for `ACCEPT`
+- added support for `tvm.log()` (see the tutorial01_getters.py)
+- fixed an issue with getter returning array of structs
+- major refactoring for Rust code
+
+### Python library
+
+- added `Address` and `Msg` helper classes
+- added `BaseContract.keypair()`
+- added `ts4.get_balance()`
+- implemented printing getter names in verbose mode
+- improved error reporting
+
+
 ## 10-02-2021: TestSuite4 0.1.1
 
 ### Tutorials
 
-- added `tutorial06_signatures` - working with singed external calls, 
+- added `tutorial06_signatures` - working with singed external calls,
   and handling exceptions raised by a contract.
 - added `tutorial07_time` - fast-forwarding time however you need to.
 - added `tutorial08_balance` - fetching contract balance.
@@ -30,5 +59,6 @@
 - switched to the latest PyO3 library
 
 
-
 ## 20-01-2021: Initial Release of version 0.1.0
+
+- Initial Release of version 0.1.0

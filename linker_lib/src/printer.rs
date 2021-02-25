@@ -11,6 +11,7 @@ use ton_block::*;
 use ton_types::cells_serialization::serialize_tree_of_cells;
 use ton_types::Cell;
 
+#[allow(dead_code)]
 pub fn state_init_printer(state: &StateInit) -> String {
     format!("StateInit\n split_depth: {}\n special: {}\n data: {}\n code: {}\n lib:  {}\n",
         state.split_depth.as_ref().map(|x| format!("{:?}", x)).unwrap_or("None".to_string()),
@@ -21,6 +22,7 @@ pub fn state_init_printer(state: &StateInit) -> String {
     )
 }
 
+#[allow(dead_code)]
 fn tree_of_cells_into_base64(root_cell: Option<&Cell>) -> String {
     match root_cell {
         Some(cell) => {
@@ -32,6 +34,7 @@ fn tree_of_cells_into_base64(root_cell: Option<&Cell>) -> String {
     }
 }
 
+#[allow(dead_code)]
 pub fn msg_printer(msg: &Message) -> String {
     format!("message header\n{}init  : {}\nbody  : {}\nbody_hex: {}\nbody_base64: {}\n",
         print_msg_header(&msg.header()),
@@ -53,6 +56,7 @@ pub fn msg_printer(msg: &Message) -> String {
     )
 }
 
+#[allow(dead_code)]
 fn print_msg_header(header: &CommonMsgInfo) -> String {
     match header {
         CommonMsgInfo::IntMsgInfo(header) => {

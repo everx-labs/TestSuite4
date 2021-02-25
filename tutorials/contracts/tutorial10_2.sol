@@ -9,15 +9,12 @@
 
 pragma ton-solidity >=0.30.0;
 
-contract Tutorial07 {
-    uint64 m_unlockAt;
+contract Tutorial10 {
+    uint16 public m_value;
 
-    constructor() public {
-        tvm.accept();
-        m_unlockAt = now + 7 days;
-    }
-
-    function isUnlocked() public view returns (bool) {
-        return m_unlockAt <= now;
+    function call_me(uint16 value) public {
+        // Ensure it is internal message
+        require(msg.sender != address(0), 101);
+        m_value = value;
     }
 }

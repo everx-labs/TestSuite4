@@ -15,10 +15,9 @@
 '''
 
 
-import sys
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq
+import tonos_ts4.ts4 as ts4
+
+eq = ts4.eq
 
 # Set a directory where the artifacts of the used contracts are located
 ts4.set_tests_path('contracts/')
@@ -33,10 +32,10 @@ data = ts4.core.load_data_cell('contracts/tutorial05_2.tvc')
 # Register ABI of the second contract in the system beforehand
 ts4.register_abi('tutorial05_2')
 
-# Deploy the first contract
-contract1 = ts4.BaseContract('tutorial05_1', dict(code = code, data = data), nickname = 'contract1')
+# Deploy the first contract and register nickname to be used in the output
+contract1 = ts4.BaseContract('tutorial05_1', dict(code = code, data = data), nickname = 'Parent')
 
-zero_address = '0:0000000000000000000000000000000000000000000000000000000000000000'
+zero_address = ts4.Address('0:' + '0'*64)
 assert eq(zero_address, contract1.call_getter('m_address'))
 
 # Ask contract1 to deploy contract2 with a given key
@@ -44,6 +43,10 @@ contract1.call_method('deploy', dict(key = 123))
 
 # Fetch the address of the contract to be deployed
 address2 = contract1.call_getter('m_address')
+ts4.ensure_address(address2)
+
+# We register nickname for this contract so see it in the verbose output
+ts4.register_nickname(address2, 'Child')
 
 print('Deploying at {}'.format(address2))
 
