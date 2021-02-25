@@ -7,7 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-pragma solidity >=0.6.0;
+pragma ton-solidity >=0.30.0;
 
 contract Tutorial02 {
     uint public m_number;

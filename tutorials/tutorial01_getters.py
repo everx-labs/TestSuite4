@@ -15,19 +15,19 @@
 '''
 
 
-import sys
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq
+import tonos_ts4.ts4 as ts4
+
+eq = ts4.eq
 
 # Set a directory where the artifacts of the used contracts are located
 ts4.set_tests_path('contracts/')
 
 # Toggle to print additional execution info
-ts4.set_verbose(True)
+ts4.set_verbose(False)
 
 # Load a contract from .tvc-file and deploy it into a virtual blockchain.
 # Constructor is called automatically.
+# After deployment, "logstr: Constructor" will appear in the output to facilitate the debugging process.
 tut01 = ts4.BaseContract('tutorial01', {})
 
 # Call an integer getter and ensure that we received correct value
@@ -38,7 +38,7 @@ print('ok')
 
 # Call the getter and ensure that we received correct address
 print("Fetching 'm_address'... ", end='')
-expected_address = '0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069'
+expected_address = ts4.Address('0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069')
 assert eq(expected_address, tut01.call_getter('m_address'))
 print('ok')
 

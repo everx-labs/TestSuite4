@@ -7,7 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-pragma solidity >=0.6.0;
+pragma ton-solidity >=0.30.0;
 
 contract Tutorial01Getters {
 
@@ -28,6 +28,9 @@ contract Tutorial01Getters {
 
     constructor() public {
         tvm.accept();
+
+        // Added to facilitate the debugging process
+        tvm.log('Constructor');
 
         m_number = 3735928559;
         m_address = address(0xc4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069);

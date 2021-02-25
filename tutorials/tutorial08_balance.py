@@ -15,10 +15,9 @@
 '''
 
 
-import sys
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq
+import tonos_ts4.ts4 as ts4
+
+eq = ts4.eq
 
 
 # Set a directory where the artifacts of the used contracts are located
@@ -28,10 +27,10 @@ ts4.set_tests_path('contracts/')
 ts4.set_verbose(True)
 
 # The address of a non-existing contract
-empty_account = '0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069'
+empty_account = ts4.Address('0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069')
 
 # Check balance of non-existing address
-assert eq(None, ts4.core.get_balance(empty_account))
+assert eq(None, ts4.get_balance(empty_account))
 
 default_balance = 100 * ts4.GRAM
 

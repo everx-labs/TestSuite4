@@ -7,7 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-pragma solidity >=0.6.0;
+pragma ton-solidity >=0.30.0;
 
 interface INeighbor {
     function pong(uint32 replay) external;
@@ -16,7 +16,7 @@ interface INeighbor {
 contract Tutorial04_2 {
     event ReceivedRequest(uint32 request);
 
-    function ping(uint32 request) public {
+    function ping(uint32 request) public pure {
         tvm.accept();
         INeighbor(msg.sender).pong(request);
         emit ReceivedRequest(request);

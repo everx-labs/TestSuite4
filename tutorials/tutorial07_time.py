@@ -14,12 +14,10 @@
 '''
 
 
-import sys
 import time
-sys.path.append('../ts4_py_lib')
-import ts4
-from ts4 import eq  # noqa: E402
+import tonos_ts4.ts4 as ts4
 
+eq = ts4.eq
 
 # Set a directory where the artifacts of the used contracts are located
 ts4.set_tests_path('contracts/')

@@ -1,0 +1,33 @@
+{
+	"ABI version": 2,
+	"header": ["time"],
+	"functions": [
+		{
+			"name": "call_me",
+			"inputs": [
+				{"name":"value","type":"uint16"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_value",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_value","type":"uint16"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	]
+}
