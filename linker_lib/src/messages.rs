@@ -428,9 +428,21 @@ fn fetch_src_dst(ton_msg: &TonBlockMessage) -> (Option<AddressWrapper>, Option<A
     }
 }
 
+fn substitute_created_at(msg: &TonBlockMessage, now: u32) -> TonBlockMessage {
+    let mut msg = msg.clone();
+    if let Some(int_header) = msg.int_header_mut() {
+        int_header.created_at = now.into();
+    }
+    msg
+}
+
 impl MessageStorage {
     pub fn add(&mut self, msg_info: MsgInfo) -> Arc<MsgInfo> {
         let mut msg_info = msg_info;
+        let timestamp = msg_info.json.timestamp.unwrap();
+        msg_info.ton_msg = msg_info.ton_msg.map(
+            |msg| substitute_created_at(&msg, timestamp as u32)
+        );
         msg_info.set_id(self.messages.len() as u32);
         let msg_info = Arc::new(msg_info);
         self.messages.push(msg_info.clone());

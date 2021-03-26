@@ -1,4 +1,40 @@
 
+
+## 26-03-2021: TestSuite4 0.2.0
+
+### General
+
+- Added `ts4.init()` function for initializing TS4.
+- Added `ts4.reset_all()`.
+- Added `ts4.load_code_cell()` and `ts4.load_data_cell()`.
+- Added `ts4.set_contract_abi()`.
+- Added `ts4.zero_addr()`.
+- Improved support for working with large ints.
+- Added `callback` parameter to `dispatch_messages()`.
+- added `Bytes` helper class
+- added `dst` parameter to `Msg.is_event()`
+- Added `G_STOP_ON_NO_ACCEPT` flag that controls runtime progress
+  while processing method without `tvm.accept()`.
+- No need to change working directory before running tests anymore
+
+### Tutorials
+
+- added `tutorial11_set_code` - using the contract code update functionality
+- updated all tutorials
+
+### Bugs and Issues
+
+- Added support for `msg.createdAt`, `block.timestamp` and `tx.timestamp`.
+
+### Methods and getters
+
+- Implemented calling methods with return value.
+- Forbidden sending messages and firing events from getters.
+- Removed `private_key` parameter from `call_getter()`.
+- Added `expect_ec` parameter to `call_getter()`.
+- Added experimental `call_getter(...decode=True)` mode.
+
+
 ## 25-02-2021: TestSuite4 0.1.2
 
 ### General

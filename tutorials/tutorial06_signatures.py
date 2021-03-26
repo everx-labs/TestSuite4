@@ -35,11 +35,9 @@ class Tut06(ts4.BaseContract):
         return self.call_method_signed('setNumber', {'value': value}, expect_ec = expect_ec)
 
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 # Deploy a contract
 tut06 = Tut06()

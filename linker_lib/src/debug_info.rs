@@ -14,11 +14,11 @@ use serde::{Deserialize, Serialize};
 use ton_block::{Serializable, StateInit};
 
 use ton_types::{
-    UInt256, Cell, SliceData, 
+    UInt256, Cell, SliceData,
 };
 
 use ton_vm::executor::{
-    EngineTraceInfo, 
+    EngineTraceInfo,
 };
 
 
@@ -89,10 +89,13 @@ pub fn _save_debug_info(
 
 pub fn load_debug_info(
     state_init: &StateInit,
-    filename: String
+    filename: String,
+    verbose: bool,
 ) -> Option<ContractDebugInfo> {
 
-    println!("---- load_debug_info ({})----", filename);
+    if verbose {
+        println!("---- load_debug_info ({})----", filename);
+    }
 
     let mut hash2function = HashMap::new();
 

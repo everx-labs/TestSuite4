@@ -13,15 +13,14 @@
 
 '''
 
-import tonos_ts4.ts4 as ts4
+
+from tonos_ts4 import ts4
 
 eq = ts4.eq
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 # Deploy a contract (encoder/sender)
 sender = ts4.BaseContract('tutorial10_1', {})

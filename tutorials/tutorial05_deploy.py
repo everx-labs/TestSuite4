@@ -15,19 +15,17 @@
 '''
 
 
-import tonos_ts4.ts4 as ts4
+from tonos_ts4 import ts4
 
 eq = ts4.eq
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 # Load code and data of the second contract
-code = ts4.core.load_code_cell('contracts/tutorial05_2.tvc')
-data = ts4.core.load_data_cell('contracts/tutorial05_2.tvc')
+code = ts4.load_code_cell('tutorial05_2.tvc')
+data = ts4.load_data_cell('tutorial05_2.tvc')
 
 # Register ABI of the second contract in the system beforehand
 ts4.register_abi('tutorial05_2')

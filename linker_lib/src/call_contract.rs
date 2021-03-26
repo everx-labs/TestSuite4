@@ -95,6 +95,7 @@ pub fn call_contract_ex(
     trace2: bool,
     config_params: Option<Cell>,
     now: u64,
+    lt: u64,
 ) -> ExecutionResult {
 
     if debug {
@@ -129,7 +130,7 @@ pub fn call_contract_ex(
     let registers = initialize_registers(
         data,
         addr,
-        now,
+        now, lt,
         (contract_balance, CurrencyCollection::with_grams(contract_balance)),
         config_params,
     );
@@ -167,8 +168,8 @@ pub fn call_contract_ex(
 
     let mut engine = Engine::new().setup(code, Some(registers), Some(stack), Some(gas));
 
-    let debug_info = if debug {
-        load_debug_info(&state_init, debug_info_filename)
+    let debug_info = if debug || trace2 {
+        load_debug_info(&state_init, debug_info_filename, debug)
     } else {
         None
     };
@@ -274,8 +275,9 @@ fn initialize_registers(
     data: SliceData,
     myself: &MsgAddressInt,
     now: u64,
+    lt: u64,
     balance: (u64, CurrencyCollection),
-    config_params: Option<Cell>
+    config_params: Option<Cell>,
 ) -> SaveList {
     let mut ctrls = SaveList::new();
     let mut info = SmartContractInfo::with_myself(myself.write_to_new_cell().unwrap().into());
@@ -285,6 +287,8 @@ fn initialize_registers(
     if let Some(config_params) = config_params {
         info.set_config_params(config_params)
     }
+    *info.block_lt_mut() = lt;
+    *info.trans_lt_mut() = lt;
     ctrls.put(4, &mut StackItem::Cell(data.into_cell())).unwrap();
     ctrls.put(7, &mut info.into_temp_data()).unwrap();
     ctrls

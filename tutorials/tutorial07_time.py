@@ -19,16 +19,13 @@ import tonos_ts4.ts4 as ts4
 
 eq = ts4.eq
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
-
 now = int(time.time())
-# TS4 uses either real-clock or virtual time. Once you can core.set_now() you switch
-#   to virtual time mode, where you can move time to future on your own
-ts4.core.set_now(now)
+# Initialize TS4: ts4.init(path, verbose = False, time = 0)
+# path: set a directory where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+# time: in seconds. TS4 uses either real-clock or virtual time. Once you set time you switch
+#    to virtual time mode, where you can move time to future on your own
+ts4.init('contracts/', verbose = True, time = now)
 
 # Deploy a contract
 tut07 = ts4.BaseContract('tutorial07', {})

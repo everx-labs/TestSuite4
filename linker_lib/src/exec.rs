@@ -118,6 +118,7 @@ pub fn apply_constructor(
     trace2: bool,
     time_header: Option<String>,
     now: u64,
+    lt: u64,
 ) -> Result<StateInit, String> {
 
     let keypair = decode_private_key(&private_key);
@@ -151,6 +152,7 @@ pub fn apply_constructor(
         trace, trace2,
         None,
         now,
+        lt,
     );
 
     if is_success_exit_code(result.info.exit_code) {
@@ -256,6 +258,8 @@ pub fn exec_contract_and_process_actions(
 ) -> ExecutionResult2 {
 
     // TODO: Too long function
+    
+    gs.lt = gs.lt + 1;
 
     let address = msg_info.dst();
     let mut contract_info = gs.get_contract(&address).unwrap();
@@ -270,6 +274,7 @@ pub fn exec_contract_and_process_actions(
         gs.trace, gs.trace_on,
         make_config_params(&gs),
         gs.get_now(),
+        gs.lt,
     );
 
     result.info.inbound_msg_id = msg_info.id();
@@ -371,6 +376,7 @@ pub fn load_state_init(
                         private_key.clone(),
                         trace, gs.trace_on,
                         time_header, gs.get_now(),
+                        gs.lt,
                     );
         if result.is_err() {
             return Err(result.err().unwrap());
