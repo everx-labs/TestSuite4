@@ -1,4 +1,4 @@
-# TestSuite4 0.1.2
+# TestSuite4 0.2.0
 
 TestSuite4 is a framework designed to simplify development and testing of TON Contracts. It contains lightweight
 blockchain emulator making it easy to develop contracts in a TDD-friendly style.
@@ -24,6 +24,7 @@ See `tutorials` for self-documented examples of framework usage.
 - [tutorial08_balance.py](https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial08_balance.py) - Fetching contract balance.
 - [tutorial09_send_money.py](https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial09_send_money.py) - Send money and watch it travel within the virtual blockchain.
 - [tutorial10_encode_call.py](https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial10_encode_call.py) - Encode the payload for use in the `transfer()` call.
+- [tutorial11_set_code.py](https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial11_set_code.py) - Using the contract code update functionality.
 
 ## Quick Start
 

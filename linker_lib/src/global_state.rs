@@ -53,6 +53,7 @@ pub struct GlobalState {
     pub config_params: HashMap<u32, Cell>,
     now: Option<u64>,
     now2: u64,
+    pub lt: u64,
     pub runs: Vec<ExecutionResultInfo>,
 }
 

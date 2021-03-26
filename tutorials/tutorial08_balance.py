@@ -19,12 +19,9 @@ import tonos_ts4.ts4 as ts4
 
 eq = ts4.eq
 
-
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 # The address of a non-existing contract
 empty_account = ts4.Address('0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069')

@@ -29,7 +29,6 @@ def test1():
 
     # Get internal message that was created by previous call
     msg_ping = ts4.peek_msg()
-    print(msg_ping)
     assert eq(neighbor1, msg_ping.src)
     assert eq(neighbor2, msg_ping.dst)
     assert msg_ping.is_call('ping')
@@ -40,9 +39,9 @@ def test1():
 
     # Pick up event that was created by called method of the callee contract
     msg_event1 = ts4.pop_event()
-    # Ensure that dst address is empty
-    assert msg_event1.dst.empty()
-    assert msg_event1.is_event('ReceivedRequest', neighbor2)
+
+    # Check correctness of event addresses
+    assert msg_event1.is_event('ReceivedRequest', src = neighbor2, dst = ts4.Address(None))
     assert eq(t_value, int(msg_event1.params['request']))
 
     # Get internal message that was created by last call
@@ -55,12 +54,15 @@ def test1():
     # Dispatch next message
     ts4.dispatch_one_message()
 
-    # Pick up last event
+    # Pick up last event and check its parameters
     msg_event2 = ts4.pop_event()
-    # Ensure that dst address is empty (other variant)
-    assert eq(ts4.Address(None), msg_event2.dst)
-    assert msg_event2.is_event('ReceivedReply', neighbor1)
+    assert msg_event2.is_event('ReceivedReply', src = neighbor1, dst = ts4.Address(None))
     assert eq(t_value, int(msg_event2.params['reply']))
+
+    # Working with raw JSON data is not always convenient. That's why we
+    # provide a way to decode data:
+    event2 = contract1.decode_event(msg_event2)
+    assert eq(t_value, event2.reply)
 
 
 def test2():
@@ -79,17 +81,15 @@ def test2():
 
     # Processing last event
     msg_event = ts4.pop_event()
+
     # Ensure that dst address is empty (one more variant)
-    assert eq(ts4.Address(''), msg_event.dst)
-    assert msg_event.is_event('ReceivedReply', neighbor1)
+    assert msg_event.is_event('ReceivedReply', src = neighbor1, dst = ts4.Address(None))
     assert eq(t_value, int(msg_event.params['reply']))
 
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 # Deploy contracts
 contract1 = ts4.BaseContract('tutorial04_1', {})

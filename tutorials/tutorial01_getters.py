@@ -19,11 +19,9 @@ import tonos_ts4.ts4 as ts4
 
 eq = ts4.eq
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(False)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = False)
 
 # Load a contract from .tvc-file and deploy it into a virtual blockchain.
 # Constructor is called automatically.
@@ -50,12 +48,12 @@ print('ok')
 # Call string getter and check the returned value. We `bytes2str()` helper
 # to decode string value from bytes
 print("Fetching 'm_string'... ", end='')
-assert eq('green tea', ts4.bytes2str(tut01.call_getter('m_string')))
+assert eq('green tea', tut01.call_getter('m_string'))
 print('ok')
 
 # Working with bytes-type is very similar to working with strings
 print("Fetching 'm_bytes'... ", end='')
-assert eq('coffee', ts4.bytes2str(tut01.call_getter('m_bytes')))
+assert eq('coffee', tut01.call_getter('m_bytes'))
 print('ok')
 
 # Call the getter and ensure that we received correct array value

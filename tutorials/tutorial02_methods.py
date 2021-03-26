@@ -42,17 +42,15 @@ def test1():
     assert eq(t_bool, tut02.call_getter('m_bool'))
 
     # Call method to set bytes value. In ABI `bytes` type is represented as a hex string
-    t_bytes = '01020304'
+    t_bytes = ts4.Bytes('d090d091d092')
     tut02.call_method('set_bytes', {'value': t_bytes})
     assert eq(t_bytes, tut02.call_getter('m_bytes'))
 
     # String values are represented in hex, so we need to use `str2bytes()` helper.
-    t_string = 'coffee'
+    t_string = 'coffeeАБВ'
     tut02.call_method('set_string', {'value': ts4.str2bytes(t_string)})
-
     # Call the getter and ensure that we received correct string value.
-    # Use `bytes2str()` to decode from hex representation.
-    assert eq(t_string, ts4.bytes2str(tut02.call_getter('m_string')))
+    assert eq(t_string, tut02.call_getter('m_string'))
 
     # Call method to set array.
     t_array = [1, 2, 3, 4, 5]
@@ -69,11 +67,9 @@ def test1():
     assert eq(t_struct, tut02.call_getter('get_struct'))
 
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 # Run a test
 test1()

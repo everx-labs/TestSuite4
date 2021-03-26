@@ -159,6 +159,7 @@ fn set_balance(address: String, balance: u64) -> PyResult<()> {
 fn dispatch_message(msg_id: u32) -> PyResult<(i32, Vec<String>, i64, Option<String>)> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let result = dispatch_message_impl(&mut gs, msg_id);
+    gs.last_trace = result.trace.clone();
     Ok(result.unpack())
 }
 

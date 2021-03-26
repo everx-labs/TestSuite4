@@ -67,11 +67,9 @@ def test4():
     assert eq(t_number, tut.call_getter('m_number'))
 
 
-# Set a directory where the artifacts of the used contracts are located
-ts4.set_tests_path('contracts/')
-
-# Toggle to print additional execution info
-ts4.set_verbose(True)
+# Initialize TS4 by specifying where the artifacts of the used contracts are located
+# verbose: toggle to print additional execution info
+ts4.init('contracts/', verbose = True)
 
 test1()
 test2()
