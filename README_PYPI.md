@@ -1,4 +1,4 @@
-# TestSuite4 0.2.0
+# TestSuite4 0.2.1
 
 TestSuite4 is a framework designed to simplify development and testing of TON Contracts. It contains lightweight
 blockchain emulator making it easy to develop contracts in a TDD-friendly style.
@@ -50,3 +50,5 @@ git clone git@github.com:tonlabs/TestSuite4.git
 cd TestSuite4/tutorials
 python tutorial01_getters.py
 ```
+
+For more information, visit [TestSuite4's documentation](https://tonlabs.github.io/TestSuite4/).

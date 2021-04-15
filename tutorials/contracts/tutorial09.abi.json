@@ -13,6 +13,16 @@
 			]
 		},
 		{
+			"name": "send_grams_with_payload",
+			"inputs": [
+				{"name":"addr","type":"address"},
+				{"name":"amount","type":"uint64"},
+				{"name":"comment","type":"bytes"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "constructor",
 			"inputs": [
 			],
@@ -23,5 +33,14 @@
 	"data": [
 	],
 	"events": [
+		{
+			"name": "Transfered",
+			"inputs": [
+				{"name":"amount","type":"uint128"},
+				{"name":"comment","type":"bytes"}
+			],
+			"outputs": [
+			]
+		}
 	]
 }

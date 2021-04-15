@@ -1,0 +1,86 @@
+.. _ts4:
+
+Developer Interface
+===================
+
+.. module:: tonos_ts4.ts4
+
+This part of the documentation covers all the interfaces of TS4.
+
+Main Interface
+--------------
+
+.. autofunction:: init
+.. autofunction:: set_verbose
+.. autofunction:: set_stop_at_crash
+.. autofunction:: verbose_
+.. autofunction:: verbose
+.. autofunction:: reset_all
+.. autofunction:: version
+
+Address helpers
+^^^^^^^^^^^^^^^
+
+.. autofunction:: zero_addr
+.. autofunction:: ensure_address
+
+Account balance
+^^^^^^^^^^^^^^^
+
+.. autofunction:: ensure_balance
+.. autofunction:: get_balance
+
+Work with ABI
+^^^^^^^^^^^^^
+
+.. autofunction:: fix_abi
+.. autofunction:: register_abi
+.. autofunction:: set_contract_abi
+
+Messages
+^^^^^^^^
+
+.. autofunction:: pop_msg
+.. autofunction:: peek_msg
+.. autofunction:: pop_event
+.. autofunction:: peek_event
+.. autofunction:: queue_length
+.. autofunction:: ensure_queue_empty
+.. autofunction:: dump_queue
+
+Dispatching
+"""""""""""
+
+.. autofunction:: dispatch_one_message
+.. autofunction:: dispatch_messages
+
+Artifacts
+^^^^^^^^^
+.. autofunction:: load_tvc
+.. autofunction:: load_code_cell
+.. autofunction:: load_data_cell
+
+Other
+^^^^^
+
+.. autofunction:: register_nickname
+.. autofunction:: decode_int
+.. autofunction:: make_keypair
+.. autofunction:: eq
+.. autofunction:: set_tests_path
+.. autofunction:: str2bytes
+.. autofunction:: bytes2str
+
+Classes
+-------
+BaseContract
+^^^^^^^^^^^^
+.. autoclass:: tonos_ts4.ts4.BaseContract
+
+Address
+^^^^^^^
+.. autoclass:: tonos_ts4.ts4.Address
+
+Msg
+^^^
+.. autoclass:: tonos_ts4.ts4.Msg

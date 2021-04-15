@@ -33,6 +33,7 @@ extern crate ton_abi;
 mod printer;
 mod util;
 mod abi;
+mod actions;
 mod debug_info;
 mod global_state;
 mod exec;
@@ -43,6 +44,7 @@ use global_state::{
     GlobalState, GLOBAL_STATE,
 };
 
+use ton_block::Serializable;
 use util::{
     decode_address, load_from_file,
 };
@@ -77,8 +79,10 @@ use ton_types::{
     SliceData,
     serialize_toc,
     cells_serialization::{deserialize_cells_tree},
+    BagOfCells
 };
 
+use std::io::Write;
 
 #[pyfunction]
 fn set_trace(trace: bool) -> PyResult<()> {
@@ -106,7 +110,8 @@ fn deploy_contract(
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let trace = gs.trace;
 
-    let abi_info = gs.all_abis.from_file(&abi_file);
+    let abi_info = gs.all_abis.from_file(&abi_file)
+                     .map_err(|e| PyRuntimeError::new_err(e))?;
 
     let state_init = load_state_init(
         &mut gs,
@@ -129,6 +134,46 @@ fn deploy_contract(
         wc,
         balance,
     ).map_err(|err_str| PyRuntimeError::new_err(err_str))
+}
+
+#[pyfunction]
+fn fetch_contract_state(address: String) -> PyResult<(Option<String>, Option<String>)> {
+    let address = decode_address(&address);
+    let gs = GLOBAL_STATE.lock().unwrap();
+    let contract = gs.get_contract(&address);
+    if contract.is_none() {
+        return Ok((None, None))
+    }
+    let contract = contract.unwrap();
+    let state_init = contract.state_init();
+
+    let code = state_init.code.as_ref().unwrap();
+    let code = serialize_toc(&code).unwrap();
+    let code = base64::encode(&code);
+    let data = state_init.data.as_ref().unwrap();
+    let data = serialize_toc(&data).unwrap();
+    let data = base64::encode(&data);
+
+    Ok((Some(code), Some(data)))
+}
+
+#[pyfunction]
+fn save_tvc(address: String, filename: String) -> PyResult<()> {
+    let address = decode_address(&address);
+    let gs = GLOBAL_STATE.lock().unwrap();
+    let contract = gs.get_contract(&address).unwrap();
+
+    let root = contract.state_init().write_to_new_cell()
+        .map_err(|e| format!("Serialization failed: {}", e)).unwrap()
+        .into();
+    let mut buffer = vec![];
+    BagOfCells::with_root(&root).write_to(&mut buffer, false)
+        .map_err(|e| format!("BOC failed: {}", e)).unwrap();
+
+    let mut file = std::fs::File::create(&filename).unwrap();
+    file.write_all(&buffer).map_err(|e| format!("Write to file failed: {}", e)).unwrap();
+
+    Ok(())
 }
 
 #[pyfunction]
@@ -166,10 +211,16 @@ fn dispatch_message(msg_id: u32) -> PyResult<(i32, Vec<String>, i64, Option<Stri
 #[pyfunction]
 fn set_contract_abi(address_str: Option<String>, abi_file: String) -> PyResult<()> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
-    let abi_info = gs.all_abis.from_file(&abi_file);
+    let abi_info = gs.all_abis.from_file(&abi_file)
+                     .map_err(|e| PyRuntimeError::new_err(e))?;
     if let Some(address_str) = address_str {
         let addr = decode_address(&address_str);
-        let mut contract_info = gs.get_contract(&addr).unwrap();
+        let contract_info = gs.get_contract(&addr);
+        if contract_info.is_none() {
+            let err = format!("Unable to set ABI for non-existent address {}", addr);
+            return Err(PyRuntimeError::new_err(err));
+        }
+        let mut contract_info = contract_info.unwrap();
         contract_info.set_abi(abi_info);
         gs.set_contract(addr, contract_info);
     }
@@ -214,13 +265,14 @@ fn call_contract(
     address_str: String,
     method: String,
     is_getter: bool,
+    is_debot: bool,
     params: String,
     private_key: Option<String>,
 ) -> PyResult<(i32, Vec<String>, i64, Option<String>)> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let result =
         call_contract_impl(&mut gs, address_str, method,
-                           is_getter, params, private_key);
+                           is_getter, is_debot, params, private_key);
     if let Ok(ref result) = result {
         gs.last_trace = result.trace.clone();
     }
@@ -344,6 +396,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(log_str))?;
     m.add_wrapped(wrap_pyfunction!(get_balance))?;
     m.add_wrapped(wrap_pyfunction!(set_balance))?;
+    m.add_wrapped(wrap_pyfunction!(fetch_contract_state))?;
 
     m.add_wrapped(wrap_pyfunction!(dispatch_message))?;
 
@@ -352,15 +405,17 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(trace_on))?;
     m.add_wrapped(wrap_pyfunction!(set_contract_abi))?;
     m.add_wrapped(wrap_pyfunction!(set_config_param))?;
-    
+
     m.add_wrapped(wrap_pyfunction!(make_keypair))?;
     m.add_wrapped(wrap_pyfunction!(sign_cell))?;
     m.add_wrapped(wrap_pyfunction!(load_code_cell))?;
     m.add_wrapped(wrap_pyfunction!(load_data_cell))?;
-    
+
     m.add_wrapped(wrap_pyfunction!(get_all_runs))?;
     m.add_wrapped(wrap_pyfunction!(get_all_messages))?;
     m.add_wrapped(wrap_pyfunction!(get_last_trace))?;
+
+    m.add_wrapped(wrap_pyfunction!(save_tvc))?;
 
     Ok(())
 }

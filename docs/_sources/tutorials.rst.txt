@@ -1,0 +1,26 @@
+.. _tutorials:
+
+List of tutorials
+=================
+
+* `tutorial01_getters.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial01_getters.py>`_ - Working with getters of various types.
+
+* `tutorial02_methods.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial02_methods.py>`_ - Working with external methods.
+
+* `tutorial03_constructors.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial03_constructors.py>`_ - Working with constructors.
+
+* `tutorial04_messages.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial04_messages.py>`_ - Dispatching messages between contracts and catching events.
+
+* `tutorial05_deploy.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial05_deploy.py>`_ - Deploying a contract from a contract and working with it through wrappers.
+
+* `tutorial06_signatures.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial06_signatures.py>`_ - Working with singed external calls and handling exceptions raised by a contract.
+
+* `tutorial07_time.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial07_time.py>`_ - Fast-forwarding time however you need to.
+
+* `tutorial08_balance.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial08_balance.py>`_ - Fetching contract balance.
+
+* `tutorial09_send_money.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial09_send_money.py>`_ - Send money and watch it travel within the virtual blockchain.
+
+* `tutorial10_encode_call.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial10_encode_call.py>`_ - Encode the payload for use in the transfer() call.
+
+* `tutorial11_set_code.py <https://github.com/tonlabs/TestSuite4/blob/master/tutorials/tutorial11_set_code.py>`_ - Using the contract code update functionality.

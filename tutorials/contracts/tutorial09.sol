@@ -9,13 +9,30 @@
 
 pragma ton-solidity >=0.30.0;
 
+interface IContract {
+    function transfer(bytes comment) external functionID(0) view;
+}
+
 contract ContractTransfer {
+    event Transfered(uint128 amount, bytes comment);
+
     function send_grams(address addr, uint64 amount, bool bounce) pure public {
         tvm.accept();
         addr.transfer(amount, bounce);
     }
 
+    function send_grams_with_payload(address addr, uint64 amount, bytes comment) public pure {
+        tvm.accept();
+        TvmCell payload = tvm.encodeBody(IContract.transfer, comment);
+        addr.transfer({ value: amount, body: payload });
+    }
+
     onBounce(TvmSlice body) pure external {
         require(body.bits() == 0);
+    }
+
+    receive() external pure {
+        TvmSlice data = msg.data;
+        emit Transfered(msg.value, data.decode(bytes));
     }
 }
