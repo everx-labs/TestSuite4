@@ -123,9 +123,10 @@ pub struct MessageInfo2 {       // TODO!!: rename?
     ton_msg:        Option<TonBlockMessage>,
     dst:            Option<MsgAddressInt>,
     value:          Option<u64>,
-    pub ticktock: Option<i8>,
+    pub ticktock:   Option<i8>,
     is_getter_call:         bool,
     is_offchain_ctor_call:  bool,
+    is_debot_call:          bool,
 }
 
 #[derive(Default)]
@@ -240,7 +241,7 @@ impl MessageInfo2 {
     }
 
     pub fn is_external_call(&self) -> bool {
-        self.is_ext_msg() && !self.is_getter_call && !self.is_offchain_ctor_call
+        self.is_ext_msg() && !self.is_getter_call && !self.is_offchain_ctor_call && !self.is_debot_call
     }
 
     pub fn with_info(msg: &MsgInfo) -> MessageInfo2 {
@@ -271,9 +272,10 @@ impl MessageInfo2 {
         msg_info
     }
 
-    pub fn with_getter(msg: TonBlockMessage, is_getter: bool) -> MessageInfo2 {
+    pub fn with_getter(msg: TonBlockMessage, is_getter: bool, is_debot: bool) -> MessageInfo2 {
         let mut msg_info = Self::with_ton_msg(msg);
         msg_info.is_getter_call = is_getter;
+        msg_info.is_debot_call  = is_debot;
         msg_info
     }
 

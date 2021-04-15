@@ -1,0 +1,74 @@
+.. _install:
+
+Installation of TestSuite4
+==========================
+
+This part of the documentation covers the installation of TestSuite4.
+The first step to using any software package is getting it properly installed.
+
+
+Installation
+------------
+
+To install latest release of `TestSuite4 <https://pypi.org/project/tonos-ts4/>`_, simply run this simple command in your terminal of choice:
+
+.. code-block:: shell
+
+    $ python -m pip install tonos-ts4
+
+Getting the Source Code
+-----------------------
+
+TestSuite4 is actively developed on GitHub, where the code is
+`always available <https://github.com/tonlabs/TestSuite4>`_.
+
+You can either clone the public repository:
+
+.. code-block:: shell
+
+    $ git clone git@github.com:tonlabs/TestSuite4.git
+
+Once you have a copy of the source, you can embed it in your own Python
+package, or install it into your site-packages easily:
+
+.. tab:: Linux
+
+    .. parsed-literal::
+
+        $ cd linker_lib
+        $ cargo update && ./build_release.sh
+        [...]
+        renamed './target/release/linker_lib.so' -> '../tonos_ts4/linux/linker_lib.so'
+
+        $ cd ..
+        $ python3 setup.py develop
+        [...]
+        Adding tonos-ts4 \ |release|\  to easy-install.pth file
+
+.. tab:: macOS
+
+    .. parsed-literal::
+
+        $ cd linker_lib
+        $ cargo update && ./build_release.sh
+        [...]
+        renamed './target/release/linker_lib.dylib' -> '../tonos_ts4/linux/linker_lib.so'
+
+        $ cd ..
+        $ python3 setup.py develop
+        [...]
+        Adding tonos-ts4 \ |release|\  to easy-install.pth file
+
+.. tab:: Windows
+
+    .. parsed-literal::
+
+        C:\> cd linker_lib
+        C:\> cargo update && build_release.sh
+        [...]
+        renamed './target/release/linker_lib.dll' -> '../tonos_ts4/win32/linker_lib.pyd'
+
+        C:\> cd ..
+        C:\> python setup.py develop
+        [...]
+        Adding tonos-ts4 \ |release|\  to easy-install.pth file

@@ -57,7 +57,10 @@ pub fn convert_address(address: UInt256, wc: i8) -> MsgAddressInt {
 }
 
 pub fn load_from_file(contract_file: &str) -> StateInit {
-    let mut csor = Cursor::new(std::fs::read(contract_file).unwrap());
+    let content = std::fs::read(contract_file)
+        .map_err(|e| format!("Cannot load {}: {}", contract_file, e))
+        .unwrap();      // TODO!: return error
+    let mut csor = Cursor::new(content);
     let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
     StateInit::construct_from(&mut cell.into()).unwrap()
 }

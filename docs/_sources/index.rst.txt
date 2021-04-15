@@ -1,0 +1,31 @@
+Welcome to TestSuite4's documentation!
+======================================
+Release v\ |version| (:ref:`Installation <install>`)
+
+**TestSuite4** is a framework designed to simplify development and testing of TON Contracts. It contains lightweight blockchain emulator making it easy to develop contracts in a TDD-friendly style.
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Contents
+
+   quick
+   install
+   tutorials
+
+The API Documentation
+---------------------
+
+If you are looking for information on a specific function, class, or method,
+this part of the documentation is for you.
+
+.. toctree::
+   :maxdepth: 4
+
+   ts4
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

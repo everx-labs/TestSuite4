@@ -1,4 +1,4 @@
-# TestSuite4 0.2.0
+# TestSuite4 0.2.1
 
 TestSuite4 is a framework designed to simplify development and testing of TON Contracts. It contains lightweight
 blockchain emulator making it easy to develop contracts in a TDD-friendly style.
@@ -10,7 +10,7 @@ blockchain emulator making it easy to develop contracts in a TDD-friendly style.
 - **Deep Integration** - access all internal messages, measure gas and control time.
 - **Easy installation** - use `pip install tonos-ts4` to install *TestSuite4* on your local Windows, Linux or macOS. You can also easily compile it from source if needed.
 
-See `tutorials` for self-documented examples of framework usage.
+See `tutorials` for self-documented examples of framework usage or visit [TestSuite4's documentation](https://tonlabs.github.io/TestSuite4/).
 
 ## List of tutorials
 
@@ -47,6 +47,8 @@ git clone git@github.com:tonlabs/TestSuite4.git
 cd TestSuite4/tutorials
 python tutorial01_getters.py
 ```
+
+For more information, visit [TestSuite4's documentation](https://tonlabs.github.io/TestSuite4/).
 
 ## Building TestSuite4 from source
 

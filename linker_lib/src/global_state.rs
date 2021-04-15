@@ -130,6 +130,9 @@ impl GlobalState {
         self.contracts.insert(address, info);
 
     }
+    pub fn remove_contract(&mut self, address: &MsgAddressInt) {
+        self.contracts.remove(address);
+    }
     pub fn address_exists(&self, address: &MsgAddressInt) -> bool {
         self.contracts.contains_key(&address)
 

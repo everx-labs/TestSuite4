@@ -62,12 +62,12 @@ impl AllAbis {
         None
     }
 
-    pub fn from_file(&mut self, filename: &String) -> AbiInfo {
+    pub fn from_file(&mut self, filename: &String) -> Result<AbiInfo, String> {
         if !self.all_abis.contains_key(filename) {
-            let info = AbiInfo::from_file(filename.clone());
+            let info = AbiInfo::from_file(filename.clone())?;
             self.register_abi(info);
         }
-        self.all_abis[filename].clone()
+        Ok(self.all_abis[filename].clone())
     }
 
 }
@@ -79,12 +79,13 @@ pub struct AbiInfo {
 }
 
 impl AbiInfo {
-    fn from_file(filename: String) -> AbiInfo {
-        let abi_str = load_abi_json_string(&filename).unwrap();
-        AbiInfo {
+    fn from_file(filename: String) -> Result<AbiInfo, String> {
+        let abi_str = load_abi_json_string(&filename)?;
+        let abi_info = AbiInfo {
             filename: filename,
             text: abi_str,
-        }
+        };
+        Ok(abi_info)
     }
     fn text(&self) -> &String {
         &self.text
@@ -172,5 +173,5 @@ pub fn set_public_key(state_init: &mut StateInit, pubkey: String) -> Result<(), 
 
 fn load_abi_json_string(abi_file: &str) -> Result<String, String> {
     std::fs::read_to_string(abi_file)
-        .map_err(|e| format!("unable to read ABI file: {}", e))
+        .map_err(|e| format!("unable to read ABI file '{}': {}", abi_file, e))
 }

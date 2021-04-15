@@ -7,10 +7,10 @@
     Copyright 2019-2021 (c) TON LABS
 """
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 import sys
-import base64, binascii
+import base64
 import secrets
 import json
 import numbers
@@ -19,6 +19,9 @@ import copy
 import os.path
 import importlib
 from glob import glob
+
+from .util import *
+from .address import *
 
 PACKAGE_DIR = os.path.basename(os.path.dirname(__file__))
 CORE = '.' + sys.platform + '.linker_lib'
@@ -31,6 +34,7 @@ except ImportError as err:
 except:
     print('Unsupported platform:', sys.platform)
     exit()
+
 
 QUEUE           = []
 EVENTS          = []
@@ -72,26 +76,16 @@ def reset_all():
     NICKNAMES       = dict()
 
 
-class BColors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
-def green(msg):     return colorize(BColors.OKGREEN, str(msg))
-def blue(msg):      return colorize(BColors.OKBLUE,  str(msg))
-def red(msg):       return colorize(BColors.FAIL,    str(msg))
-def yellow(msg):    return colorize(BColors.WARNING, str(msg))
-def white(msg):     return colorize(BColors.BOLD,    str(msg))
-
-
 class Msg:
     """The :class:`Msg <Msg>` object, which represents a blockchain message.
+
+    :ivar str id: Message ID
+    :ivar Address src: Source address
+    :ivar Address dst: Destionation address
+    :ivar str type: Type of message (`empty`, `unknown`, `bounced`, `event`, `answer`, `external_call`, `call_getter`)
+    :ivar value: The value attached to an internal message
+    :ivar str method: Called method/getter
+    :ivar dict params: A dictionary with parameters of the called method/getter
     """
     def __init__(self, data):
         """Constructs Msg object.
@@ -122,6 +116,10 @@ class Msg:
         if not self.is_type('event', 'answer', 'external_call', 'call_getter'):
             self.value   = data['value']
             self.bounced = data['bounced']
+
+        if self.is_unknown() and self.bounced:
+            self.type = 'bounced'
+
 
     def is_type(self, type1, type2 = None, type3 = None, type4 = None, type5 = None):
         """Checks if a given message has one of requested types.
@@ -194,6 +192,14 @@ class Msg:
         """
         return self.type == 'unknown'
 
+    def is_bounced(self):
+        """Checks if a current message is bounced.
+
+        :return: Result of check
+        :rtype: bool
+        """
+        return self.type == 'bounced'
+
     def dump_data(self):
         """Dumps message data.
         """
@@ -202,87 +208,14 @@ class Msg:
     def __str__(self):
         return dump_struct_str(self.data)
 
-class Address:
-    """The :class:`Address <Address>` object, which contains an
-    Address entity.
-    """
-    def __init__(self, addr):
-        """Constructs :class:`Address <Address>` object.
-
-        :param str addr: A string representing the address or None
-        """
-        if addr is None:
-            addr = ''
-        assert isinstance(addr, str), "{}".format(addr)
-        if addr.startswith(':'):
-            addr = '0' + addr
-        # TODO: check that it is a correct address string
-        self.addr_ = addr
-
-    def __str__(self):
-        """Used by print().
-
-        :return: A string representing the address
-        :rtype: str
-        """
-        return 'Addr({})'.format(self.addr_)
-    def __repr__(self):
-        return "Address('{}')".format(self.addr_)
-    def __eq__(self, other):
-        """Сompares the object with the passed value.
-
-        :param Address other: Address object
-        :return: Result of check
-        :rtype: bool
-        """
-        ensure_address(other)
-        return self.str() == other.str()
-
-    def str(self):
-        """Returns string representing given address.
-
-        :return: A string representing the address
-        :rtype: str
-        """
-        return self.addr_
-
-    def is_none(self):
-        """Checks if address is None.
-
-        :return: Result of check
-        :rtype: bool
-        """
-        return self.str() == ''
-
-    def fix_wc(self):
-        """Adds workchain_id if it was missing.
-
-        :return: Object
-        :rtype: Address
-        """
-        assert eq(':', self.addr_[0])
-        self.addr_ = '0' + self.addr_
-        return self
-
-def zero_addr(wc):
-    """Creates a zero address instance in a given workchain.
-
-    :param num wc: Workchain ID
-    :return: Object
-    :rtype: Address
-    """
-    addr = '{}:{}'.format(wc, '0'*64)
-    return Address(addr)
-
-def ensure_address(addr):
-    """Raises an error if a given object is not of :class:`Address <Address>` class.
-
-    :param Address addr: Object of class Address
-    """
-    assert isinstance(addr, Address), red('Expected Address got {}'.format(addr))
-
 class Bytes():
+    """The :class:`Bytes <Bytes>` object, which represents bytes type.
+    """
     def __init__(self, value):
+        """Constructs :class:`Bytes <Bytes>` object.
+
+        :param str value: A hexadecimal string representing array of bytes
+        """
         self.raw_ = value
 
     def __str__(self):
@@ -295,9 +228,59 @@ class Bytes():
         if isinstance(other, Bytes):
             return self.raw_ == other.raw_
         elif isinstance(other, str):
-            return str(self) == other
+            return self.raw_ == str2bytes(other)
         return False
 
+class Cell():
+    """The :class:`Cell <Cell>` object, which represents a cell.
+    """
+    def __init__(self, value):
+        """Constructs :class:`Cell <Cell>` object.
+
+        :param str value: A base64 string representing the cell
+        """
+        self.raw_ = value
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return "Cell('{}')".format(self.raw_)
+
+    def __eq__(self, other):
+        if isinstance(other, Cell):
+            return self.raw_ == other.raw_
+        return False
+
+    def is_empty(self):
+        """Checks if the cell is empty.
+
+        :return: Result of check
+        :rtype: bool
+        """
+        return EMPTY_CELL == self.raw_
+
+class AbiType:
+    def __init__(self, type):
+        assert isinstance(type, dict)
+        self.raw_ = type
+        self.name = type['name']
+        self.type = type['type']
+        if self.type == 'tuple':
+            self.components = [AbiType(t) for t in self.raw_['components']]
+        self.dont_decode = 'dont_decode' in self.raw_
+
+    def is_array(self):
+        return self.type[-2:] == '[]'
+
+    def is_int(self):
+        return re.match(r'^(u)?int\d+$', self.type)
+
+    def remove_array(self):
+        assert self.is_array()
+        type2 = copy.deepcopy(self.raw_)
+        type2['type'] = self.type[:-2]
+        return AbiType(type2)
 
 class JsonEncoder(json.JSONEncoder):
     def default(self, o):
@@ -340,22 +323,13 @@ def make_params(data):
     return data
 
 
-# TODO: private
-def transform_structure(value, callback):
-    if isinstance(value, dict):
-        nd = {}
-        for key, v in value.items():
-            nd[key] = transform_structure(v, callback)
-        return nd
-    if isinstance(value, list):
-        return [transform_structure(x, callback) for x in value]
-    return callback(value)
-
 def fix_large_ints(v):
     def transform_value(v):
         if isinstance(v, Address):
             return v.str()
         if isinstance(v, Bytes):
+            return v.raw_
+        if isinstance(v, Cell):
             return v.raw_
         if isinstance(v, int):
             if v > 0xffffFFFFffffFFFF:
@@ -398,7 +372,7 @@ def init(path, verbose = False, time = None):
         core.set_now(time)
 
 def set_verbose(verbose = True):
-    """Sets verbosity mode. When verbosity is enabled all the messages 
+    """Sets verbosity mode. When verbosity is enabled all the messages
     and some additional stuff is printed to console. Useful for debugging.
 
     :param bool verbose: Toggle to print additional execution info
@@ -407,9 +381,9 @@ def set_verbose(verbose = True):
     G_VERBOSE = verbose
 
 def set_stop_at_crash(do_stop):
-    """Sets `G_STOP_AT_CRASH` global flag. 
+    """Sets `G_STOP_AT_CRASH` global flag.
     By default the system stops at the first exception (unexpected exit code) raised by a contract.
-    Use `expect_ec` parameter if you expected an exception in a given call. 
+    Use `expect_ec` parameter if you expected an exception in a given call.
     When `G_STOP_AT_CRASH` is disabled the system only warns user and does not stop.
 
     :param bool do_stop: Toggle for crash stop mode
@@ -482,14 +456,13 @@ def process_actions(result: ExecutionResult, expect_ec = 0):
             if msg.is_unknown():
                 if G_VERBOSE:
                     print(yellow('WARNING! Unknown message!'))
+            elif msg.is_bounced():
+                pass
             elif msg.is_answer():
                 # We expect only one answer
                 assert answer is None
                 answer = msg
                 continue
-            # elif G_WARN_ON_UNEXPECTED_ANSWERS and msg.is_answer():
-                # verbose_('WARNING! Unexpected answer!')
-                # continue
             else:
                 assert msg.is_call() or msg.is_empty(), red('Unexpected type: {}'.format(msg.type))
             QUEUE.append(msg)
@@ -555,7 +528,7 @@ def dump_queue():
 def dispatch_messages(callback = None):
     """Dispatches all messages in the queue one by one until the queue becomes empty.
 
-    :param callback: Callback to be called to each processed message. 
+    :param callback: Callback to be called to each processed message.
         If callback returns False the given message is skipped.
     """
     while len(QUEUE) > 0:
@@ -578,7 +551,7 @@ def dump_all_messages():
 
 
 def register_nickname(addr, nickname):
-    """Registers human readable name for a given address. 
+    """Registers human readable name for a given address.
     This name is used in verbose output.
 
     :param Address addr: An address of the account
@@ -608,10 +581,12 @@ def dump_message(msg: Msg):
         _format_addr(msg.src),
         _format_addr(msg.dst)
     )) + ', v: {}'.format(value))
-    if msg.is_type('call',  'empty'):
+    if msg.is_type('call',  'empty', 'bounced'):
         # ttt = "{}".format(msg)
         if msg.is_call():
             ttt = "{} {}".format(green(msg.method), msg.params)
+        elif msg.is_bounced():
+            ttt = green('<bounced>')
         else:
             ttt = green('<empty>')
         print("> " + ttt)
@@ -642,12 +617,10 @@ def dispatch_one_message(expect_ec = 0):
     if msg.dst.is_none():
         # TODO: a getter's reply. Add a test for that
         return
-    # if msg['id'] == 2050: core.set_trace(True)
     result = core.dispatch_message(msg.id)
     result = ExecutionResult(result)
     gas, answer = process_actions(result, expect_ec)
     assert answer is None
-    # if msg['id'] == 2050: quit()
     return gas
 
 def set_msg_filter(filter):
@@ -656,41 +629,26 @@ def set_msg_filter(filter):
     if filter is False: filter = None
     G_MSG_FILTER = filter
 
-def decode_int(v):
-    """Decodes integer value from hex string. Helper function useful when decoding data from contracts.
-
-    :param str v: Hexadecimal string
-    :return: Decoded number
-    :rtype: num
-    """
-    if v[0:2] == '0x':
-        return int(v.replace('0x', ''), 16)
-    else:
-        return int(v)
-
 class DecodingParams:
     def __init__(self,
         decode_ints = True,
         decode_tuples = True,
         dont_decode_fields = [],
     ):
-        self.decode_ints = decode_ints
-        self.decode_tuples = decode_tuples
+        self.decode_ints        = decode_ints
+        self.decode_tuples      = decode_tuples
         self.dont_decode_fields = dont_decode_fields
 
-def decode_json_value1(value, full_type, params):
-    type = full_type['type']
+def decode_json_value(value, abi_type, params):
+    assert isinstance(abi_type, AbiType)
+    type = abi_type.type
 
-    if re.match(r'^(u)?int\d+$', type):
+    if abi_type.is_int():
         return decode_int(value) if params.decode_ints else value
 
-    if type[-2:] == '[]':
-        type2 = copy.deepcopy(full_type)
-        type2['type'] = type[:-2]
-        res = []
-        for v in value:
-            res.append(decode_json_value1(v, type2, params))
-        return res
+    if abi_type.is_array():
+        type2 = abi_type.remove_array()
+        return [decode_json_value(v, type2, params) for v in value]
 
     if type == 'bool':
         return bool(value)
@@ -699,7 +657,7 @@ def decode_json_value1(value, full_type, params):
         return Address(value)
 
     if type == 'cell':
-        return value
+        return Cell(value)
 
     if type == 'bytes':
         return Bytes(value)
@@ -707,16 +665,15 @@ def decode_json_value1(value, full_type, params):
     if type == 'tuple':
         assert isinstance(value, dict)
         res = {}
-        for c in full_type['components']:
-            field = c['name']
-            dont_decode = 'dont_decode' in c
-            if dont_decode or field in params.dont_decode_fields:
+        for c in abi_type.components:
+            field = c.name
+            if c.dont_decode or field in params.dont_decode_fields:
                 res[field] = value[field]
             else:
-                res[field] = decode_json_value1(value[field], c, params)
+                res[field] = decode_json_value(value[field], c, params)
         return res
 
-    print(type, full_type, value)
+    print(type, abi_type, value)
     verbose_("Unsupported type '{}'".format(type))
     return value
 
@@ -730,35 +687,6 @@ def make_keypair():
     public_key = '0x' + public_key
     return (secret_key, public_key)
 
-def colorize(color, text):
-    if sys.stdout.isatty():
-        return color + text + BColors.ENDC
-    else:
-        return text
-
-def eq(v1, v2, dismiss = False, msg = None, xtra = ''):
-    """Helper function to check that two values are equal.
-    Prints the message in case of mismatch, and optionally stops tests execution.
-
-    :param Any v1: Expected value
-    :param Any v2: Actual value
-    :param bool dismiss: When False stops the entire execution in case of mismatch.
-        When True only error message is shown
-    :param str msg: Optional additional message to be printed in case of mismatch
-    :param str xtra: Another optional additional message to be printed
-    :return: Result of check
-    :rtype: bool
-    """
-    if v1 == v2:
-        return True
-    else:
-        if msg is None:
-            msg = ''
-        else:
-            msg = msg + ' '
-        print(msg + red('exp: {}, got: {}.'.format(v1, v2)) + xtra)
-        return True if dismiss else False
-
 def set_tests_path(path):
     """Sets the directory where the system will look for compiled contracts.
 
@@ -766,37 +694,6 @@ def set_tests_path(path):
     """
     global G_TESTS_PATH
     G_TESTS_PATH = path
-
-def str2bytes(s: str) -> str:
-    """Converts string to hex representations.
-
-    :param str s: A string to convert
-    :return: Hexadecimal string
-    :rtype: str
-    """
-    assert isinstance(s, str), 'Expected string got {}'.format(s)
-    ss = str(binascii.hexlify(s.encode()))[1:]
-    return ss.replace("'", "")
-
-## Decodes utf-8 string from hex representation
-def bytes2str(b: str) -> str:
-    """Decodes utf-8 string from hex representation
-
-    :param str b: Hexadecimal string to convert
-    :return: String
-    :rtype: str
-    """
-    return binascii.unhexlify(b).decode('utf-8')
-
-def make_secret_token(n):
-    return '0x' + secrets.token_hex(n)
-
-def fix_uint256(s):
-    assert s[0:2] == '0x', 'Expected hexadecimal, got {}'.format(s)
-    t = s[2:]
-    if len(t) < 64:
-        s = '0x' + ('0' * (64-len(t))) + t
-    return s
 
 def dump_struct_str(struct):
     return json.dumps(struct, indent = 2, cls = JsonEncoder)
@@ -821,8 +718,8 @@ def load_tvc(fn):
     :rtype: str
     """
     fn = _make_path(fn, '.tvc')
-    bytes = open(fn, 'rb').read(1_000_000)
-    return base64.b64encode(bytes).decode('utf-8')
+    with open(fn, 'rb') as fp:
+        return base64.b64encode(fp.read(1_000_000)).decode('utf-8')
 
 def load_code_cell(fn):
     """Loads contract code cell from a compiled contract image with a given name.
@@ -885,8 +782,31 @@ def set_contract_abi(contract, new_abi_name):
     assert isinstance(contract, BaseContract)
     fn = _make_path(new_abi_name, '.abi.json')
     core.set_contract_abi(contract.addr().str(), fn)
-    contract.abi_ = json.loads(open(fn).read())
+    with open(fn, 'rb') as fp:
+        contract.abi_ = json.load(fp)
 
+def sign_cell(cell, private_key):
+    """Signs cell with a given key and returns signature.
+
+    :param Cell value: Cell to be signed
+    :param str private_key: Hexadecimal representation of 1024-bits long private key
+    :return: Hexadecimal string representing resulting signature
+    :rtype: str
+    """
+    assert isinstance(cell, Cell)
+    assert isinstance(private_key, str)
+    assert eq(128, len(private_key))
+    # TODO: check that it is hexadecimal number
+    return core.sign_cell(cell.raw_, private_key)
+
+def set_config_param(index, value):
+    """Sets global config parameter.
+
+    :param num index: Parameter index
+    :param Cell value: Cell object containing desired value.
+    """
+    assert isinstance(value, Cell)
+    core.set_config_param(index, value.raw_)
 
 #########################################################################################################
 
@@ -964,7 +884,7 @@ class AbiTraversalHelper:
         cb(path, json)
 
 def fix_abi(name, abi, callback):
-    """Goes through given ABI calling a callback function for each node
+    """Travels through given ABI calling a callback function for each node
 
     :param str name: Contract name
     :param dict abi: Contract ABI
@@ -1056,7 +976,8 @@ class BaseContract:
             core.set_contract_abi(self.address().str(), name + '.abi.json')
 
         # Load ABI
-        self.abi_ = json.loads(open(name + '.abi.json').read())
+        with open(name + '.abi.json', 'rb') as fp:
+            self.abi_ = json.load(fp)
 
         if G_ABI_FIXER is not None:
             fix_abi(self.name_, self.abi_, G_ABI_FIXER)
@@ -1100,7 +1021,7 @@ class BaseContract:
         :rtype: JSON
         """
         if G_VERBOSE:
-            print('getter: {}'.format(green(method)))   # TODO!: print full info
+            print('getter: {}'.format(green(method)))   # TODO: print full info
             # print("getter: {} {}".format(method, params))
 
         assert isinstance(method,    str)
@@ -1111,6 +1032,7 @@ class BaseContract:
             self.addr().str(),
             method,
             True,   # is_getter
+            False,  # is_debot
             _json_dumps(params),
             None,   # private_key
         )
@@ -1137,13 +1059,13 @@ class BaseContract:
     def _find_getter_output_types(self, method):
         for rec in self.abi_['functions']:
             if rec['name'] == method:
-                return rec['outputs']
+                return [AbiType(t) for t in rec['outputs']]
         assert False
 
     def _find_getter_output_type(self, method, key):
         types = self._find_getter_output_types(method)
         for t in types:
-            if t['name'] == key:
+            if t.name == key:
                 return t
         assert False
 
@@ -1174,7 +1096,8 @@ class BaseContract:
             # TODO: ensure values is empty?
             return
 
-        answer = self._decode_answer(values, method, key, DecodingParams(decode_ints, decode_tuples, dont_decode_fields))
+        decoding_params = DecodingParams(decode_ints, decode_tuples, dont_decode_fields)
+        answer = self._decode_answer(values, method, key, decoding_params)
         return make_params(answer) if decode else answer
 
     def _decode_answer(self,
@@ -1195,9 +1118,9 @@ class BaseContract:
         assert key in values, red("No '{}' in {}".format(key, values))
 
         value     = values[key]
-        full_type = self._find_getter_output_type(method, key)
+        abi_type = self._find_getter_output_type(method, key)
 
-        return decode_json_value1(value, full_type, params)
+        return decode_json_value(value, abi_type, params)
 
     def decode_event(self, event_msg):
         """Experimental feature. Decodes event parameters
@@ -1214,15 +1137,13 @@ class BaseContract:
 
         assert event_def is not None, red('Cannot find event: {}'.format(event_name))
 
-        # TODO!!: copy/paste - refactor!
         res = {}
         for type in event_def['inputs']:
-            # TODO!: Add class for Type
-            name  = type['name']
+            type = AbiType(type)
+            name  = type.name
             value = values[name]
-            if 'dont_decode' not in type:
-                params = DecodingParams()
-                value = decode_json_value1(value, type, params)
+            if not type.dont_decode:
+                value = decode_json_value(value, type, DecodingParams())
             res[name] = value
 
         return Params(res)
@@ -1243,17 +1164,15 @@ class BaseContract:
         res_dict = {}
         res_arr  = []
         for type in types:
-            # TODO!: Add class for Type
-            name  = type['name']
-            value = decode_json_value1(values[name], type, params)
-            res_dict[name] = value
+            value = decode_json_value(values[type.name], type, params)
+            res_dict[type.name] = value
             res_arr.append(value)
-        if params.decode_tuples and types[0]['name'] == 'value0':
+        if params.decode_tuples and types[0].name == 'value0':
             return tuple(res_arr)
         else:
             return res_dict
 
-    def call_method(self, method, params = dict(), private_key = None, expect_ec = 0):
+    def call_method(self, method, params = dict(), private_key = None, expect_ec = 0, is_debot = False):
         """Calls a given method.
 
         :param str method: Name of the method to be called
@@ -1261,6 +1180,7 @@ class BaseContract:
         :param str private_key: A private key to be used to sign the message
         :param num expect_ec: Expected exit code. Use non-zero value
             if you expect a method to raise an exception
+        :param bool is_debot: Enables special debot mode
         :return: Value in decoded form (if method returns something)
         :rtype: dict
         """
@@ -1274,6 +1194,7 @@ class BaseContract:
                 self.addr().str(),
                 method,
                 False, # is_getter
+                is_debot,
                 _json_dumps(params),
                 private_key,
             )

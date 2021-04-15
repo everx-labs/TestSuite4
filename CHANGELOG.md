@@ -1,4 +1,23 @@
+## 15-04-2021: TestSuite4 0.2.1
 
+### New Features
+
+  - Added `ts4.core.fetch_contract_state()`
+  - Implemented self-destruct feature (128+32)
+  - Added class `Cell`
+
+### Tutorials
+
+  - Updated `tutorial09_send_money` with case which simulating to send message likes the Surf
+
+### Bugs and Issues
+
+  - Forced to close opened files after reading
+  - Fixed `Bytes` to string comparision behavior
+  - Added `ts4.set_config_param()` helper
+  - Added `ts4.sign_cell()` helper
+  - Improved support for bounced messages (no 'WARNING! Unknown message!' anymore)
+  - Improved error handling
 
 ## 26-03-2021: TestSuite4 0.2.0
 

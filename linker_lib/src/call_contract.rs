@@ -16,7 +16,7 @@ use serde::{
 use ton_block::{
     CurrencyCollection, Deserializable,
     MsgAddressInt,
-    OutAction, OutActions,
+    OutActions,
     Serializable, StateInit,
 };
 
@@ -36,11 +36,8 @@ use ton_vm::executor::{
 };
 
 use crate::global_state::{
-    GlobalState, ContractInfo,
-};
-
-use crate::util::{
-    bigint_to_u64, get_msg_value, substitute_address,
+    // GlobalState,
+    ContractInfo,
 };
 
 use crate::debug_info::{
@@ -48,54 +45,46 @@ use crate::debug_info::{
     get_function_name,
 };
 
-use crate::abi::{
-    AbiInfo
-};
-
 use crate::messages::{
     AddressWrapper,
-    MsgInfo, MessageInfo2,
-};
-
-use crate::exec::{
-    decode_message,
+    MessageInfo2,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, Debug)]
 pub struct ExecutionResult {
-    pub info: ExecutionResultInfo,
-    pub info_ex: ExecutionResultEx,
-    pub info_msg: Option<String>,
-    pub trace: Option<Vec<TraceStepInfo>>,
+    pub info:       ExecutionResultInfo,
+    pub info_ex:    ExecutionResultEx,
+    pub info_msg:   Option<String>,
+    pub trace:      Option<Vec<TraceStepInfo>>,
 }
 
 // TODO: unify these structures. Or give better names
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ExecutionResultInfo {
-    pub run_id: Option<u32>,
-    pub address: AddressWrapper,
+    pub run_id:         Option<u32>,
+    pub address:        AddressWrapper,
     pub inbound_msg_id: Option<u32>,
-    pub exit_code: i32,
-    pub gas: i64,
+    pub exit_code:      i32,
+    pub gas:            i64,
 }
 
 #[derive(Clone, Debug)]
 pub struct ExecutionResultEx {
-    pub state_init: StateInit,
-    pub out_actions: OutActions,
+    pub state_init:     StateInit,
+    pub out_actions:    OutActions,
 }
 
 pub fn call_contract_ex(
-    contract_info: &ContractInfo,
-    msg_info: &MessageInfo2,
-    debug: bool,
-    trace2: bool,
-    config_params: Option<Cell>,
-    now: u64,
-    lt: u64,
+    contract_info:  &ContractInfo,
+    msg_info:       &MessageInfo2,
+    debug:          bool,
+    trace2:         bool,
+    config_params:  Option<Cell>,
+    now:            u64,
+    lt:             u64,
 ) -> ExecutionResult {
 
     if debug {
@@ -340,141 +329,6 @@ fn trace_callback(
     if info.info_type == EngineTraceInfoType::Dump {
         println!("logstr: {}", info.cmd_str);
     }
-}
-
-pub fn process_actions(
-    gs: &mut GlobalState,
-    mut contract_info: ContractInfo,
-    result: &ExecutionResult,
-    method: Option<String>,
-    msg_value: Option<u64>,
-) -> Vec<MsgInfo> {
-
-    let mut msg_value = msg_value.unwrap_or_default();
-
-    let address: &MsgAddressInt = contract_info.address();
-
-    let mut balance = contract_info.balance();
-    let abi_info = contract_info.abi_info();
-
-    let mut msgs = vec![];
-    let mut code = None;
-    let mut reserved_balance = 0;
-
-    let info_ex = &result.info_ex;
-
-    for act in &info_ex.out_actions {
-        // TODO!: refactor it - remove mut params...
-        if let Some(msg_info) = process_action(
-                 gs, act, &address, &mut balance, &method,
-            &abi_info, &mut msg_value,
-            &mut reserved_balance, &mut code,
-        ) {
-            msgs.push(msg_info);
-        }
-    }
-
-    let mut state_init = info_ex.state_init.clone();
-    if let Some(c) = code {
-        state_init.set_code(c);
-    }
-
-    let address = address.clone();
-
-    contract_info.set_balance(balance);
-    contract_info.set_state_init(state_init);
-    gs.set_contract(address, contract_info);
-
-    msgs
-}
-
-// TODO!!: move to actions.rs
-fn process_action(
-    gs: &GlobalState,
-    action: &OutAction,
-    address: &MsgAddressInt,
-    balance: &mut u64,
-    method: &Option<String>,
-    abi_info: &AbiInfo,
-    msg_value: &mut u64,
-    reserved_balance: &mut u64,
-    code: &mut Option<Cell>,
-) -> Option<MsgInfo> {
-    // TODO!: refactor this function! Too many parameters
-    // TODO: remove .clone()
-    match action.clone() {
-        OutAction::SendMsg{ mode, out_msg } => {
-            if gs.trace {
-                println!("Action(SendMsg):");
-            }
-            let error_str = "\n!!!!!!!!!!!! Message makes balance negative !!!!!!!!!!!!!\nBalance:   ".to_string();
-            if let Some(value) = get_msg_value(&out_msg) {
-                // TODO!: refactor, handle error
-                if *balance < value {
-                    // TODO: add a test
-                    println!("{}{b:>w1$}\nMsg value: {v:>w2$}\n", error_str, b = *balance, w1 = 19, v = value, w2 = 19);
-                    assert!(*balance >= value);
-                }
-                *balance -= value;
-            }
-
-            let mut additional_value = 0;
-            if mode == 64 {
-                // TODO!: refactor, handle error
-                if *balance < *msg_value {
-                    // TODO: add a test
-                    println!("{}{b:>w1$}\nMsg value: {v:>w2$}\n", error_str, b = *balance, w1 = 19, v = *msg_value, w2 = 19);
-                    assert!(*balance < *msg_value);
-                }
-                *balance -= *msg_value;
-                additional_value = *msg_value;
-                *msg_value = 0;
-            }
-
-            if mode == 128 {
-                additional_value = *balance - *reserved_balance;
-                *balance = *reserved_balance;
-                *reserved_balance = 0;
-            }
-
-            let out_msg = substitute_address(out_msg, &address);
-
-            // TODO: is this code needed here? Should it be moved?
-            let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value);
-            let msg_info2 = MsgInfo::create(out_msg, j);
-
-            return Some(msg_info2);
-        },
-        OutAction::SetCode { new_code } => {
-            if gs.trace {
-                println!("Action(SetCode)");
-            }
-            *code = Some(new_code);
-        },
-        OutAction::ReserveCurrency { mode, value } => {
-            if gs.trace {
-                println!("Action(ReserveCurrency)");
-            }
-            // TODO: support other modes when needed. Add more tests. Refactor balance logic
-            if mode == 0 {
-                // TODO: support other currencies
-                *reserved_balance = value.grams.0 as u64;
-                if gs.trace {
-                    println!("reserving balance {}", *reserved_balance);
-                }
-            } else if mode == 4 {
-                let orig_balance = gs.get_contract(&address).unwrap().balance();
-                *reserved_balance = orig_balance + bigint_to_u64(&value.grams.value());
-            } else {
-                println!("OutAction::ReserveCurrency - Unsupported mode {}", mode);
-            }
-        },
-        OutAction::ChangeLibrary { .. } => {
-            println!("Action(ChangeLibrary)");
-        },
-        _ => println!("Action(Unknown)"),
-    };
-    None
 }
 
 pub fn is_success_exit_code(exit_code: i32) -> bool {

@@ -29,8 +29,12 @@ use crate::global_state::{
     make_config_params,
 };
 
+use crate::actions::{
+    process_actions,
+};
+
 use crate::call_contract::{
-    call_contract_ex, process_actions,
+    call_contract_ex,
     is_success_exit_code, ExecutionResult,
 };
 
@@ -258,7 +262,7 @@ pub fn exec_contract_and_process_actions(
 ) -> ExecutionResult2 {
 
     // TODO: Too long function
-    
+
     gs.lt = gs.lt + 1;
 
     let address = msg_info.dst();
@@ -302,6 +306,7 @@ pub fn call_contract_impl(
     address_str: String,
     method: String,
     is_getter: bool,
+    is_debot: bool,
     params: String,
     private_key: Option<String>,
 ) -> Result<ExecutionResult2, String> {
@@ -342,7 +347,7 @@ pub fn call_contract_impl(
     let msg_info = MsgInfo::create(msg.clone(), msg_abi);
     gs.messages.add(msg_info);
 
-    let msg_info = MessageInfo2::with_getter(msg, is_getter);
+    let msg_info = MessageInfo2::with_getter(msg, is_getter, is_debot);
 
     let result = exec_contract_and_process_actions(
         gs, &msg_info, Some(method.clone()),
