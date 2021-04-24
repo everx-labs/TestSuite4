@@ -981,7 +981,8 @@ class BaseContract:
 
         if G_ABI_FIXER is not None:
             fix_abi(self.name_, self.abi_, G_ABI_FIXER)
-
+    
+    @property
     def balance(self):
         """Retreives balance of a given contract.
 
@@ -989,7 +990,8 @@ class BaseContract:
         :rtype: num
         """
         return get_balance(self.address())
-
+    
+    @property
     def address(self):
         """Returns address of a given contract.
 
@@ -997,7 +999,8 @@ class BaseContract:
         :rtype: Address
         """
         return self.addr_
-
+    
+    @property
     def addr(self):
         """Returns address of a given contract. Shorter version of `address()`.
 
@@ -1244,7 +1247,8 @@ class BaseContract:
         """Creates new keypair and assigns it to the contract.
         """
         (self.private_key_, self.public_key_) = make_keypair()
-
+    
+    @property
     def keypair(self):
         """Returns keypair assigned to the contract.
 
