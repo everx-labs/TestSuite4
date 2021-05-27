@@ -50,6 +50,7 @@ pub struct GlobalState {
     pub trace: bool,
     pub trace_on: bool,
     pub last_trace: Option<Vec<TraceStepInfo>>,
+    pub last_error_msg: Option<String>,
     pub config_params: HashMap<u32, Cell>,
     now: Option<u64>,
     now2: u64,

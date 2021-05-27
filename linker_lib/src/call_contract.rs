@@ -68,6 +68,7 @@ pub struct ExecutionResultInfo {
     pub address:        AddressWrapper,
     pub inbound_msg_id: Option<u32>,
     pub exit_code:      i32,
+    pub error_msg:      Option<String>,
     pub gas:            i64,
 }
 
@@ -170,11 +171,14 @@ pub fn call_contract_ex(
         trace_callback(engine, info, debug, trace2, true, &debug_info, &mut trace.clone().lock().unwrap());
     });
 
+    let mut error_msg = None;
+
     let exit_code = match engine.execute() {
         Err(exc) => match tvm_exception(exc) {
             Ok(exc) => {
+                error_msg = Some(format!("Unhandled exception: {}", exc));
                 if debug {
-                    println!("Unhandled exception: {}", exc);
+                    println!("{}", error_msg.clone().unwrap());
                 }
                 exc.exception_or_custom_code()
             }
@@ -237,6 +241,7 @@ pub fn call_contract_ex(
         address:        AddressWrapper::with_int(addr.clone()),
         inbound_msg_id: None,
         exit_code:      exit_code,
+        error_msg:      error_msg,
         gas:            gas_usage,
     };
 

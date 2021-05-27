@@ -368,6 +368,12 @@ fn get_last_trace() -> PyResult<String> {
 }
 
 #[pyfunction]
+fn get_last_error_msg() -> PyResult<Option<String>> {
+    let gs = GLOBAL_STATE.lock().unwrap();
+    Ok(gs.last_error_msg.clone())
+}
+
+#[pyfunction]
 fn load_code_cell(filename: String) -> PyResult<String> {
     let state_init = load_from_file(&filename);
     let code = state_init.code.unwrap();
@@ -414,6 +420,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(get_all_runs))?;
     m.add_wrapped(wrap_pyfunction!(get_all_messages))?;
     m.add_wrapped(wrap_pyfunction!(get_last_trace))?;
+    m.add_wrapped(wrap_pyfunction!(get_last_error_msg))?;
 
     m.add_wrapped(wrap_pyfunction!(save_tvc))?;
 

@@ -41,7 +41,7 @@ contract1.call_method('deploy', dict(key = 123))
 
 # Fetch the address of the contract to be deployed
 address2 = contract1.call_getter('m_address')
-ts4.ensure_address(address2)
+ts4.Address.ensure_address(address2)
 
 # We register nickname for this contract so see it in the verbose output
 ts4.register_nickname(address2, 'Child')
@@ -57,4 +57,4 @@ contract2 = ts4.BaseContract('tutorial05_2', ctor_params = None, address = addre
 
 # Ensure the second contract has correct key and balance
 assert eq(123, contract2.call_getter('m_key'))
-assert eq(1_000_000_000, contract2.balance())
+assert eq(1_000_000_000, contract2.balance)

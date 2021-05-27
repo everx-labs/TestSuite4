@@ -7,7 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 """
 
-__version__ = '0.2.1'
+__version__ = '0.3.0'
 
 import sys
 import base64
@@ -53,6 +53,9 @@ G_SHOW_EVENTS       = False
 G_MSG_FILTER        = None
 G_WARN_ON_UNEXPECTED_ANSWERS = False
 G_STOP_ON_NO_ACCEPT = True
+G_DECODE_TUPLES     = True
+G_STOP_ON_NO_ACCOUNT = True
+G_STOP_ON_NO_FUNDS = True
 
 G_ABI_FIXER     = None
 
@@ -239,6 +242,7 @@ class Cell():
 
         :param str value: A base64 string representing the cell
         """
+        assert isinstance(value, str)
         self.raw_ = value
 
     def __str__(self):
@@ -274,13 +278,17 @@ class AbiType:
         return self.type[-2:] == '[]'
 
     def is_int(self):
-        return re.match(r'^(u)?int\d+$', self.type)
+        return is_integer_type(self.type)
 
     def remove_array(self):
         assert self.is_array()
         type2 = copy.deepcopy(self.raw_)
         type2['type'] = self.type[:-2]
         return AbiType(type2)
+
+def is_integer_type(type):
+    assert isinstance(type, str)
+    return re.match(r'^(u)?int\d+$', type)
 
 class JsonEncoder(json.JSONEncoder):
     def default(self, o):
@@ -295,6 +303,9 @@ class JsonEncoder(json.JSONEncoder):
 class Params:
     def __init__(self, params):
         assert isinstance(params, dict), '{}'.format(params)
+        # String key means structure. Integer keys means mapping
+        for key in params.keys():
+            assert isinstance(key, str)
         self.__raw__ = params
         self.transform(params)
 
@@ -310,6 +321,17 @@ class Params:
                     value = [self.tr(x) for x in value]
                 setattr(self, key, value)
 
+    @staticmethod
+    def stringify(d):
+        arr = []
+        for k, v in d.items():
+            if isinstance(v, dict):
+                arr.append(f'{(k)}: {{{Params.stringify(v)}}}')
+            else:
+                arr.append(f'{(k)}: {(v)}')
+
+        return (', ').join(arr)
+
     def tr(self, x):
         if isinstance(x, dict):
             return Params(x)
@@ -317,13 +339,21 @@ class Params:
 
 def make_params(data):
     if isinstance(data, dict):
-        return Params(data)
+        keys = list(data.keys())
+        # String key means structure. Integer keys means mapping
+        if keys != [] and isinstance(keys[0], str):
+            return Params(data)
+        else:
+            res = dict()
+            for k in keys:
+                res[k] = make_params(data[k])
+            return res
     if isinstance(data, list):
         return [make_params(x) for x in data]
     return data
 
 
-def fix_large_ints(v):
+def _fix_large_ints(v):
     def transform_value(v):
         if isinstance(v, Address):
             return v.str()
@@ -339,7 +369,7 @@ def fix_large_ints(v):
     return transform_structure(v, transform_value)
 
 def _json_dumps(j):
-    j = fix_large_ints(j)
+    j = _fix_large_ints(j)
     return json.dumps(j) #, cls = JsonEncoder)
 
 
@@ -430,7 +460,10 @@ def process_actions(result: ExecutionResult, expect_ec = 0):
 
     if G_VERBOSE:
         if ec != 0:
-            print(yellow('exit_code = {}'.format(ec)))
+            print(grey('    exit_code: ') + yellow(ec) + '\n')
+
+    if expect_ec != ec:
+        verbose_(core.get_last_error_msg())
 
     assert eq(expect_ec, ec, dismiss = not G_STOP_AT_CRASH)
     assert eq(None, result.error)
@@ -449,13 +482,17 @@ def process_actions(result: ExecutionResult, expect_ec = 0):
                     xtra = ' ={}'.format(decode_int(params['x']))
                 elif msg.is_event('LogEvent'):
                     params['comment'] = bytearray.fromhex(params['comment']).decode()
-                print(yellow("{} {}{}".format(msg.event, params, xtra)))
+                print(bright_blue('< event') + grey(': '), end='')
+                print(cyan('          '), grey('<-'), bright_cyan(_format_addr(msg.src)))
+                print(cyan(grey('    name:   ') + cyan('{}'.format(bright_cyan(msg.event)))))
+                print(grey('    params: ') + cyan(Params.stringify(params)), cyan(xtra), '\n')
             EVENTS.append(msg)
         else:
             # not event
             if msg.is_unknown():
+                #print(msg)
                 if G_VERBOSE:
-                    print(yellow('WARNING! Unknown message!'))
+                    print(yellow('WARNING! Unknown message!')) #TODO to highlight the print
             elif msg.is_bounced():
                 pass
             elif msg.is_answer():
@@ -521,15 +558,15 @@ def ensure_queue_empty():
 def dump_queue():
     """Dumps messages queue to the console.
     """
-    print(colorize(BColors.BOLD, "QUEUE:"))
+    print(white("QUEUE:")) # revise print
     for i in range(len(QUEUE)):
         print("  {}: {}".format(i, QUEUE[i]))
 
 def dispatch_messages(callback = None):
     """Dispatches all messages in the queue one by one until the queue becomes empty.
 
-    :param callback: Callback to be called to each processed message.
-        If callback returns False the given message is skipped.
+    :param callback: Callback to be called for each processed message.
+        If callback returns False then the given message is skipped.
     """
     while len(QUEUE) > 0:
         if callback is not None and callback(peek_msg()) == False:
@@ -557,11 +594,11 @@ def register_nickname(addr, nickname):
     :param Address addr: An address of the account
     :param str nickname: A nickname for the account
     """
-    ensure_address(addr)
+    Address.ensure_address(addr)
     NICKNAMES[addr.str()] = nickname
 
 def _format_addr(addr, compact = True):
-    ensure_address(addr)
+    Address.ensure_address(addr)
     if addr.is_none():
         return 'addr_none'
     addr = addr.str()
@@ -576,27 +613,36 @@ def _format_addr(addr, compact = True):
 def dump_message(msg: Msg):
     assert isinstance(msg, Msg)
     value = msg.value / GRAM if msg.value is not None else 'n/a'
-    # print(msg)
-    print(yellow('> {} -> {}'.format(
-        _format_addr(msg.src),
-        _format_addr(msg.dst)
-    )) + ', v: {}'.format(value))
+    #print(msg)
+
+    msg_type = ''
+    ttt = ''
     if msg.is_type('call',  'empty', 'bounced'):
         # ttt = "{}".format(msg)
         if msg.is_call():
-            ttt = "{} {}".format(green(msg.method), msg.params)
+            ttt = bright_cyan(msg.method) + grey('\n    params: ') + cyan(Params.stringify(msg.params) + '\n')
+            ttt = grey('    method:') + ttt
         elif msg.is_bounced():
-            ttt = green('<bounced>')
+            msg_type = yellow(' <bounced>')
+        elif msg.is_type('empty') and value > 0:
+            msg_type = cyan(' <transfer>')
         else:
-            ttt = green('<empty>')
-        print("> " + ttt)
+            msg_type = cyan(' <empty>')
+        #print(grey('    method:'), ttt)
     elif msg.is_unknown():
-        ttt = green('<unknown>')
-        print("> " + ttt)
+        #print(msg)
+        ttt = "> " + yellow('<unknown>') #TODO to highlight the print
+        #print("> " + ttt)
     else:
         assert msg.is_answer()
-        ttt = '{}'.format(msg.data)
-        print("> " + green(ttt))
+        ttt = "> " + green('{}'.format(msg.data))
+        #print("> " + green(ttt))
+
+    print(blue('> int_msg' + msg_type) + grey(': '), end='')
+    print(bright_cyan(_format_addr(msg.src)), grey('->'), bright_cyan(_format_addr(msg.dst)), end='')
+    print(grey(', value:'), cyan(msg.value))
+    if ttt != '':
+        print(ttt)
 
 def dispatch_one_message(expect_ec = 0):
     """Takes first unprocessed message from the queue and dispatches it.
@@ -632,7 +678,7 @@ def set_msg_filter(filter):
 class DecodingParams:
     def __init__(self,
         decode_ints = True,
-        decode_tuples = True,
+        decode_tuples = None,
         dont_decode_fields = [],
     ):
         self.decode_ints        = decode_ints
@@ -673,7 +719,23 @@ def decode_json_value(value, abi_type, params):
                 res[field] = decode_json_value(value[field], c, params)
         return res
 
-    print(type, abi_type, value)
+    m = re.match(r'^map\((.*),(.*)\)$', type)
+    if m:
+        key_type = m.group(1)
+        val_type = dict(name = None, type = m.group(2))
+        if 'components' in abi_type.raw_:
+            val_type['components'] = abi_type.raw_['components']
+        val_type = AbiType(val_type)
+        res = dict()
+        for k in value.keys():
+            if key_type == 'address':
+                key = Address(k)
+            else:
+                key = decode_int(k)
+            res[key] = decode_json_value(value[k], val_type, params)
+        return res
+
+    print(type, value)
     verbose_("Unsupported type '{}'".format(type))
     return value
 
@@ -727,10 +789,10 @@ def load_code_cell(fn):
 
     :param str fn: The file name
     :return: Base64-encoded string
-    :rtype: str
+    :rtype: Cell
     """
     fn = _make_path(fn, '.tvc')
-    return core.load_code_cell(fn)
+    return Cell(core.load_code_cell(fn))
 
 def load_data_cell(fn):
     """Loads contract data cell from a compiled contract image with a given name.
@@ -738,10 +800,10 @@ def load_data_cell(fn):
 
     :param str fn: The file name
     :return: Base64-encoded string
-    :rtype: str
+    :rtype: Cell
     """
     fn = _make_path(fn, '.tvc')
-    return core.load_data_cell(fn)
+    return Cell(core.load_data_cell(fn))
 
 def grams(n):
     return '{:.3f}'.format(n / GRAM).replace('.000', '')
@@ -781,7 +843,7 @@ def set_contract_abi(contract, new_abi_name):
     """
     assert isinstance(contract, BaseContract)
     fn = _make_path(new_abi_name, '.abi.json')
-    core.set_contract_abi(contract.addr().str(), fn)
+    core.set_contract_abi(contract.addr.str(), fn)
     with open(fn, 'rb') as fp:
         contract.abi_ = json.load(fp)
 
@@ -840,6 +902,7 @@ class BalanceWatcher:
         self.contract_  = contract
         self.balance_   = contract.balance()
         self.epsilon_   = 2
+
     def ensure_change(self, expected_diff):
         cur_balance     = self.contract_.balance()
         prev_balance    = self.balance_
@@ -903,7 +966,7 @@ def get_balance(addr):
     :return: Current account balance
     :rtype: num
     """
-    ensure_address(addr)
+    Address.ensure_address(addr)
     return core.get_balance(addr.str())
 
 
@@ -919,6 +982,7 @@ class BaseContract:
         override_address    = None,
         pubkey              = None,
         private_key         = None,
+        keypair             = None,
         balance             = 100 * GRAM,
         nickname            = None,
     ):
@@ -935,45 +999,57 @@ class BaseContract:
             the contract. Otherwise the address is generated according to real blockchain rules
         :param str pubkey: Public key used in contract construction
         :param str private_key: Private key used to sign construction message
+        :param keypair: Keypair containing private and public keys
         :param num balance: Desired contract balance
         :param str nickname: Nickname of the contract used in verbose output
         """
         full_name = os.path.join(G_TESTS_PATH, name)
         just_deployed = False
+        p_n = '' if nickname == None else f'({nickname})'
         if override_address is not None:
-            ensure_address(override_address)
+            Address.ensure_address(override_address)
             override_address = override_address.str()
+        if keypair is not None:
+            (private_key, pubkey) = keypair
+        self.private_key_ = private_key
+        self.public_key_  = pubkey
         if address is None:
             if G_VERBOSE:
-                print(blue('Deploying {} ({})'.format(full_name, nickname)))
+                print(blue(f'Deploying {full_name} {p_n}'))
             if pubkey is not None:
                 assert pubkey[0:2] == '0x'
                 pubkey = pubkey.replace('0x', '')
-            address = core.deploy_contract(
-                full_name + '.tvc',
-                full_name + '.abi.json',
-                _json_dumps(ctor_params) if ctor_params is not None else None,
-                pubkey,
-                private_key,
-                wc,
-                override_address,
-                balance,
-            )
+            try:
+                address = core.deploy_contract(
+                    full_name + '.tvc',
+                    full_name + '.abi.json',
+                    _json_dumps(ctor_params) if ctor_params is not None else None,
+                    pubkey,
+                    private_key,
+                    wc,
+                    override_address,
+                    balance,
+                )
+            except:
+                err_msg = core.get_last_error_msg()
+                if err_msg is not None:
+                    verbose_(err_msg)
+                raise
             address = Address(address)
             just_deployed = True
         self._init2(name, address, just_deployed = just_deployed)
         if nickname is not None:
-            register_nickname(self.address(), nickname)
+            register_nickname(self.address, nickname)
 
     def _init2(self, name, address, nickname = None, just_deployed = False):
         self.name_ = name
-        ensure_address(address)
+        Address.ensure_address(address)
         self.addr_ = address
         name = os.path.join(G_TESTS_PATH, name)
         if not just_deployed:
             if G_VERBOSE:
-                print(colorize(BColors.OKBLUE, 'Creating wrapper for ' + name))
-            core.set_contract_abi(self.address().str(), name + '.abi.json')
+                print(blue('Creating wrapper for ' + name))
+            core.set_contract_abi(self.address.str(), name + '.abi.json')
 
         # Load ABI
         with open(name + '.abi.json', 'rb') as fp:
@@ -982,14 +1058,16 @@ class BaseContract:
         if G_ABI_FIXER is not None:
             fix_abi(self.name_, self.abi_, G_ABI_FIXER)
 
+    @property
     def balance(self):
         """Retreives balance of a given contract.
 
         :return: Account balance
         :rtype: num
         """
-        return get_balance(self.address())
+        return get_balance(self.address)
 
+    @property
     def address(self):
         """Returns address of a given contract.
 
@@ -998,8 +1076,9 @@ class BaseContract:
         """
         return self.addr_
 
+    @property
     def addr(self):
-        """Returns address of a given contract. Shorter version of `address()`.
+        """Returns address of a given contract. Shorter version of `address`.
 
         :return: Address of contract
         :rtype: Address
@@ -1008,7 +1087,7 @@ class BaseContract:
 
     def ensure_balance(self, v, dismiss = False):
         # TODO: is this method needed here?
-        ensure_balance(v, self.balance(), dismiss)
+        ensure_balance(v, self.balance, dismiss)
 
     def call_getter_raw(self, method, params = dict(), expect_ec = 0):
         """Calls a given getter and returns an answer in raw JSON format.
@@ -1021,15 +1100,15 @@ class BaseContract:
         :rtype: JSON
         """
         if G_VERBOSE:
-            print('getter: {}'.format(green(method)))   # TODO: print full info
-            # print("getter: {} {}".format(method, params))
+            print(green('  getter') + grey(':             ') + bright_cyan(_format_addr(self.addr)), end='')
+            print(cyan(grey('\n    method: ') + bright_cyan('{}'.format(method))))
 
         assert isinstance(method,    str)
         assert isinstance(params,    dict)
         assert isinstance(expect_ec, int)
 
         result = core.call_contract(
-            self.addr().str(),
+            self.addr.str(),
             method,
             True,   # is_getter
             False,  # is_debot
@@ -1040,6 +1119,8 @@ class BaseContract:
         result = ExecutionResult(result)
         assert eq(None, result.error)
         # print(actions)
+        if expect_ec != result.exit_code:
+            verbose_(core.get_last_error_msg())
         assert eq(expect_ec, result.exit_code)
 
         if expect_ec != 0:
@@ -1054,6 +1135,10 @@ class BaseContract:
         assert eq(1, len(result.actions)), 'len(actions) == 1'
         msg = Msg(json.loads(result.actions[0]))
         assert msg.is_answer(method)
+
+        if G_VERBOSE:
+            print(f"{grey('    params: ')} {cyan(Params.stringify(msg.params))}\n")
+
         return msg.params
 
     def _find_getter_output_types(self, method):
@@ -1076,7 +1161,7 @@ class BaseContract:
         expect_ec = 0,
         decode = False,
         decode_ints = True,
-        decode_tuples = True,
+        decode_tuples = None,
         dont_decode_fields = [],
     ):
         """Calls a given getter and decodes an answer.
@@ -1118,7 +1203,7 @@ class BaseContract:
         assert key in values, red("No '{}' in {}".format(key, values))
 
         value     = values[key]
-        abi_type = self._find_getter_output_type(method, key)
+        abi_type  = self._find_getter_output_type(method, key)
 
         return decode_json_value(value, abi_type, params)
 
@@ -1167,7 +1252,10 @@ class BaseContract:
             value = decode_json_value(values[type.name], type, params)
             res_dict[type.name] = value
             res_arr.append(value)
-        if params.decode_tuples and types[0].name == 'value0':
+        decode_tuples = params.decode_tuples
+        if decode_tuples is None:
+            decode_tuples = G_DECODE_TUPLES
+        if decode_tuples is True:
             return tuple(res_arr)
         else:
             return res_dict
@@ -1188,10 +1276,13 @@ class BaseContract:
         #       Or introduce special type for keys...
         assert isinstance(params, dict)
         if G_VERBOSE:
-            print(green("{} {}".format(method, prettify_dict(params))))
+            print(blue('> ext_in_msg') + grey(': '), end='')
+            print(cyan('    '), grey('->'), bright_cyan(_format_addr(self.addr)))
+            print(cyan(grey('    method: ') + bright_cyan('{}'.format(method))
+            + grey('\n    params: ') + cyan('{}'.format(Params.stringify(prettify_dict(params))))) + '\n')
         try:
             result = core.call_contract(
-                self.addr().str(),
+                self.addr.str(),
                 method,
                 False, # is_getter
                 is_debot,
@@ -1208,6 +1299,16 @@ class BaseContract:
             err_msg = '{}! No ACCEPT in the contract method `{}`'.format(severity, method)
             assert not G_STOP_ON_NO_ACCEPT, err_msg
             verbose_(err_msg)
+        elif result.error == 'no_account':
+            severity = 'ERROR' if G_STOP_ON_NO_ACCOUNT else 'WARNING'
+            err_msg = '{}! Account doesn\'t exist: `{}`'.format(severity, self.addr.str())
+            assert not G_STOP_ON_NO_ACCOUNT, err_msg
+            verbose_(err_msg)
+        elif result.error == 'no_funds':
+            severity = 'ERROR' if G_STOP_ON_NO_FUNDS else 'WARNING'
+            err_msg = '{}! Not enough funds on: `{}`'.format(severity, self.addr.str())
+            assert not G_STOP_ON_NO_FUNDS, err_msg
+            verbose_(err_msg)
         else:
             _gas, answer = process_actions(result, expect_ec)
             if answer is not None:
@@ -1222,8 +1323,10 @@ class BaseContract:
         :param dict params: A dictionary with parameters for calling the contract function
         :param num expect_ec: Expected exit code. Use non-zero value
             if you expect a method to raise an exception
+        :return: Value in decoded form (if method returns something)
+        :rtype: dict
         """
-        self.call_method(method, params, private_key = self.private_key_, expect_ec = expect_ec)
+        return self.call_method(method, params, private_key = self.private_key_, expect_ec = expect_ec)
 
     def ticktock(self, is_tock):
         """Simulates tick-tock call.
@@ -1233,18 +1336,17 @@ class BaseContract:
         :rtype: num
         """
         if G_VERBOSE:
-            print('ticktock {}'.format(_format_addr(self.address())))
-        result = core.call_ticktock(self.address().str(), is_tock)
+            print('ticktock {}'.format(_format_addr(self.address)))
+        result = core.call_ticktock(self.address.str(), is_tock)
         result = ExecutionResult(result)
         gas, answer = process_actions(result)
         assert answer is None
         return gas
 
     def create_keypair(self):
-        """Creates new keypair and assigns it to the contract.
-        """
-        (self.private_key_, self.public_key_) = make_keypair()
+        assert False, red("create_keypair() is deprecated. Use 'keypair' parameter of BaseContract's constructor instead")
 
+    @property
     def keypair(self):
         """Returns keypair assigned to the contract.
 

@@ -93,9 +93,9 @@ ts4.init('contracts/', verbose = True)
 
 # Deploy contracts
 contract1 = ts4.BaseContract('tutorial04_1', {})
-neighbor1 = contract1.addr()
+neighbor1 = contract1.addr
 contract2 = ts4.BaseContract('tutorial04_2', {})
-neighbor2 = contract2.addr()
+neighbor2 = contract2.addr
 
 # Register nicknames to be used in the output
 ts4.register_nickname(neighbor1, 'Alice')

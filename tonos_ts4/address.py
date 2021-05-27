@@ -1,4 +1,4 @@
-from .util import *
+from .util import eq, red
 
 class Address:
     """The :class:`Address <Address>` object, which contains an
@@ -24,8 +24,13 @@ class Address:
         :rtype: str
         """
         return 'Addr({})'.format(self.addr_)
+
     def __repr__(self):
         return "Address('{}')".format(self.addr_)
+
+    def __hash__(self):
+        return hash(self.addr_)
+
     def __eq__(self, other):
         """Сompares the object with the passed value.
 
@@ -33,7 +38,7 @@ class Address:
         :return: Result of check
         :rtype: bool
         """
-        ensure_address(other)
+        Address.ensure_address(other)
         return self.str() == other.str()
 
     def str(self):
@@ -62,6 +67,32 @@ class Address:
         self.addr_ = '0' + self.addr_
         return self
 
+    @staticmethod
+    def zero_addr(wc):
+        """Creates a zero address instance in a given workchain.
+
+        :param num wc: Workchain ID
+        :return: Object
+        :rtype: Address
+        """
+        addr = '{}:{}'.format(wc, '0'*64)
+        return Address(addr)
+
+    @staticmethod
+    def ensure_address(addr):
+        """Raises an error if a given object is not of :class:`Address <Address>` class.
+
+        :param Address addr: Object of class Address
+        """
+        assert isinstance(addr, Address), red('Expected Address got {}'.format(addr))
+
+def ensure_address(addr):
+    """Raises an error if a given object is not of :class:`Address <Address>` class.
+
+    :param Address addr: Object of class Address
+    """
+    Address.ensure_address(addr)
+
 def zero_addr(wc):
     """Creates a zero address instance in a given workchain.
 
@@ -69,13 +100,4 @@ def zero_addr(wc):
     :return: Object
     :rtype: Address
     """
-    addr = '{}:{}'.format(wc, '0'*64)
-    return Address(addr)
-
-def ensure_address(addr):
-    """Raises an error if a given object is not of :class:`Address <Address>` class.
-
-    :param Address addr: Object of class Address
-    """
-    assert isinstance(addr, Address), red('Expected Address got {}'.format(addr))
-
+    return Address.zero_addr(wc)

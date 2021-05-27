@@ -10,11 +10,13 @@
 			]
 		},
 		{
-			"name": "get_struct",
+			"name": "get_tuple",
 			"inputs": [
 			],
 			"outputs": [
-				{"components":[{"name":"s_number","type":"uint256"},{"name":"s_address","type":"address"},{"name":"s_array","type":"uint8[]"}],"name":"someStruct","type":"tuple"}
+				{"name":"one","type":"uint256"},
+				{"name":"two","type":"uint256"},
+				{"name":"three","type":"uint256"}
 			]
 		},
 		{
@@ -63,6 +65,22 @@
 			],
 			"outputs": [
 				{"name":"m_array","type":"uint8[]"}
+			]
+		},
+		{
+			"name": "m_struct",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"s_number","type":"uint256"},{"name":"s_address","type":"address"},{"name":"s_array","type":"uint8[]"}],"name":"m_struct","type":"tuple"}
+			]
+		},
+		{
+			"name": "m_uint_addr",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_uint_addr","type":"map(uint256,address)"}
 			]
 		}
 	],
