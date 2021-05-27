@@ -23,6 +23,16 @@
 			]
 		},
 		{
+			"name": "send_grams_with_flags",
+			"inputs": [
+				{"name":"addr","type":"address"},
+				{"name":"amount","type":"uint128"},
+				{"name":"flags","type":"uint16"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "constructor",
 			"inputs": [
 			],

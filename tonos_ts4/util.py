@@ -4,12 +4,18 @@ import binascii
 class BColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
+    BRIGHT_BLUE = '\033[94;1m'
     OKGREEN = '\033[92m'
+    BRIGHT_GREEN = '\033[92;1m'
+    RESET = '\033[90m'
     WARNING = '\033[93m'
     FAIL = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    CYAN = '\033[36m'
+    BRIGHT_CYAN = '\033[36;1m'
+    WHITE = '\033[37m'
 
 def colorize(color, text):
     if sys.stdout.isatty():
@@ -17,11 +23,16 @@ def colorize(color, text):
     else:
         return text
 
-def green(msg):     return colorize(BColors.OKGREEN, str(msg))
-def blue(msg):      return colorize(BColors.OKBLUE,  str(msg))
-def red(msg):       return colorize(BColors.FAIL,    str(msg))
-def yellow(msg):    return colorize(BColors.WARNING, str(msg))
-def white(msg):     return colorize(BColors.BOLD,    str(msg))
+def green(msg):        return colorize(BColors.OKGREEN,      str(msg))
+def bright_green(msg): return colorize(BColors.BRIGHT_GREEN, str(msg))
+def blue(msg):         return colorize(BColors.OKBLUE,       str(msg))
+def bright_blue(msg):  return colorize(BColors.BRIGHT_BLUE,  str(msg))
+def red(msg):          return colorize(BColors.FAIL,         str(msg))
+def yellow(msg):       return colorize(BColors.WARNING,      str(msg))
+def white(msg):        return colorize(BColors.BOLD,         str(msg))
+def grey(msg):         return colorize(BColors.RESET,        str(msg))
+def cyan(msg):         return colorize(BColors.CYAN,         str(msg))
+def bright_cyan(msg):  return colorize(BColors.BRIGHT_CYAN,  str(msg))
 
 def transform_structure(value, callback):
     if isinstance(value, dict):

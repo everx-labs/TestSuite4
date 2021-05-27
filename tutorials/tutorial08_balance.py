@@ -38,4 +38,4 @@ tut08 = ts4.BaseContract('tutorial08', {})
 tut08.ensure_balance(default_balance)
 
 # Another way to check the balance of contract
-assert eq(default_balance, tut08.balance())
+assert eq(default_balance, tut08.balance)

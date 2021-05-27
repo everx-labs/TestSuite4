@@ -24,7 +24,7 @@ def test1():
     print('Transfer with bounce')
     # Deploy the sender's contract and register nickname to be used in the output
     sender = ts4.BaseContract('tutorial09', {}, nickname = 'Sender')
-    addr_sender = sender.address()
+    addr_sender = sender.address
     balance_sender = 100 * ts4.GRAM
 
     # Сheck the sender's initial balance. There are 100 grams by default
@@ -88,12 +88,12 @@ def test2():
     print('Transfer with payload')
     # Deploy the sender's contract and register nickname to be used in the output
     sender = ts4.BaseContract('tutorial09', {}, nickname = 'Sender')
-    balance_sender = sender.balance()
+    balance_sender = sender.balance
 
     # Deploy the another one recipient's contract and register nickname to be used in the output
     recipient = ts4.BaseContract('tutorial09', {}, nickname = 'Recipient')
-    addr_recipient = recipient.address()
-    balance_recipient = recipient.balance()
+    addr_recipient = recipient.address
+    balance_recipient = recipient.balance
 
     # Send grams to the recipient without payload
     amount = 2 * ts4.GRAM
@@ -116,6 +116,41 @@ def test2():
     assert eq(amount,  decoded.amount)
 
 
+def test3():
+    print('Transfer with flags')
+
+    # Deploy the sender's contract and register nickname to be used in the output
+    sender = ts4.BaseContract('tutorial09', {}, nickname = 'Sender')
+    balance_sender = sender.balance
+
+    # Deploy the another one recipient's contract and register nickname to be used in the output
+    recipient = ts4.BaseContract('tutorial09', {}, nickname = 'Recipient')
+    addr_recipient = recipient.address
+    balance_recipient = recipient.balance
+
+    # Send grams to the recipient (regular transfer)
+    amount = 3 * ts4.GRAM
+    params = dict(addr = addr_recipient, amount = amount, flags = 0)
+    sender.call_method('send_grams_with_flags', params)
+
+    # Dispatch created message
+    ts4.dispatch_one_message()
+
+    # Сheck the current balance of the sender and recipient
+    sender.ensure_balance(balance_sender - amount)
+    recipient.ensure_balance(balance_recipient + amount)
+
+    # Send remainig balance and self-destroy sender's contract
+    params = dict(addr = addr_recipient, amount = 0, flags = 160)
+    sender.call_method('send_grams_with_flags', params)
+    ts4.dispatch_one_message()
+
+    # Сheck the current balance of the recipient, it's should be increased by sender's balance
+    recipient.ensure_balance(balance_recipient + balance_sender)
+    # Balance of the sender should be None, because of the contract destroyed
+    assert eq(None, ts4.get_balance(sender.address))
+
+
 # Initialize TS4 by specifying where the artifacts of the used contracts are located
 # verbose: toggle to print additional execution info
 ts4.init('contracts/', verbose = True)
@@ -126,3 +161,7 @@ test1()
 ts4.reset_all()
 
 test2()
+
+ts4.reset_all()
+
+test3()

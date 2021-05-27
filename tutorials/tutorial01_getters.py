@@ -29,45 +29,72 @@ ts4.init('contracts/', verbose = False)
 tut01 = ts4.BaseContract('tutorial01', {})
 
 # Call an integer getter and ensure that we received correct value
-print("Fetching 'm_number'... ", end='')
+print("Fetching 'm_number'   : ", end='')
 expected_value = 3735928559
-assert eq(expected_value, tut01.call_getter('m_number'))
-print('ok')
+answer = tut01.call_getter('m_number')
+print(ts4.cyan(answer))
+assert eq(expected_value, answer)
 
 # Call the getter and ensure that we received correct address
-print("Fetching 'm_address'... ", end='')
+print("Fetching 'm_address'  : ", end='')
 expected_address = ts4.Address('0:c4a31362f0dd98a8cc9282c2f19358c888dfce460d93adb395fa138d61ae5069')
-assert eq(expected_address, tut01.call_getter('m_address'))
-print('ok')
+answer = tut01.call_getter('m_address')
+print(ts4.cyan(answer))
+assert eq(expected_address, answer)
 
 # Call the getter and ensure that we received correct boolean value
-print("Fetching 'm_bool'... ", end='')
-assert eq(True, tut01.call_getter('m_bool'))
-print('ok')
+print("Fetching 'm_bool'     : ", end='')
+answer = tut01.call_getter('m_bool')
+print(ts4.cyan(answer))
+assert eq(True, answer)
 
-# Call string getter and check the returned value. We `bytes2str()` helper
-# to decode string value from bytes
-print("Fetching 'm_string'... ", end='')
-assert eq('green tea', tut01.call_getter('m_string'))
-print('ok')
+# Call string getter and check the returned value
+print("Fetching 'm_string'   : ", end='')
+answer = tut01.call_getter('m_string')
+print(ts4.cyan(answer))
+assert eq('green tea', answer)
 
 # Working with bytes-type is very similar to working with strings
-print("Fetching 'm_bytes'... ", end='')
-assert eq('coffee', tut01.call_getter('m_bytes'))
-print('ok')
+print("Fetching 'm_bytes'    : ", end='')
+answer = tut01.call_getter('m_bytes')
+print(ts4.cyan(answer))
+assert eq('coffee', answer)
 
 # Call the getter and ensure that we received correct array value
-print("Fetching 'm_array'... ", end='')
+print("Fetching 'm_array'    : ", end='')
+answer = tut01.call_getter('m_array')
+print(ts4.cyan(answer))
 expected_array = [1, 2, 3, 4, 5]
-assert eq(expected_array, tut01.call_getter('m_array'))
-print('ok')
+assert eq(expected_array, answer)
 
 # Structures are represented as dictionaries on Python side
-print("Fetching 'get_struct'... ", end='')
+print("Fetching 'm_struct'   : ", end='')
+answer = tut01.call_getter('m_struct')
+print(ts4.cyan(answer))
 expected_struct = dict(
     s_number  = expected_value,
     s_address = expected_address,
     s_array   = expected_array
 )
-assert eq(expected_struct, tut01.call_getter('get_struct'))
-print('ok')
+assert eq(expected_struct, answer)
+
+# Now consider getters returning tuples. Tuples are mapped to python tuples by default
+print("Fetching 'get_tuple'  : ", end='')
+answer = tut01.call_getter('get_tuple')
+print(ts4.cyan(answer))
+assert eq((111,222,333), answer)
+
+# But if you want to obtain a named structure, you can use `decode_tuples` parameter
+expected_dict = dict(one = 111, two = 222, three = 333)
+assert eq(expected_dict, tut01.call_getter('get_tuple', decode_tuples = False))
+
+# Alternatively you can set this mode globally
+ts4.G_DECODE_TUPLES = False
+assert eq(expected_dict, tut01.call_getter('get_tuple'))
+
+# mappings
+print("Fetching 'm_uint_addr':")
+
+exp = tut01.call_getter('m_uint_addr')
+[print(ts4.cyan(f'    {i} => {exp[i]}')) for i in exp]
+assert eq(expected_address, exp[expected_value])

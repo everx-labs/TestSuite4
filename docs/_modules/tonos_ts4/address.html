@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.address - TestSuite4 v0.2.1b</title>
+        <title>tonos_ts4.address - TestSuite4 v0.3.0</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.2.1b</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.3.0</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.2.1b</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.3.0</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -115,6 +115,7 @@
 </form><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../quick.html">Quick start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation of TestSuite4</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">List of tutorials</a></li>
 </ul>
@@ -135,7 +136,7 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for tonos_ts4.address</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">.util</span> <span class="kn">import</span> <span class="o">*</span>
+<span></span><span class="kn">from</span> <span class="nn">.util</span> <span class="kn">import</span> <span class="n">eq</span><span class="p">,</span> <span class="n">red</span>
 
 <div class="viewcode-block" id="Address"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Address">[docs]</a><span class="k">class</span> <span class="nc">Address</span><span class="p">:</span>
     <span class="sd">"""The :class:`Address &lt;Address&gt;` object, which contains an</span>
@@ -161,8 +162,13 @@
 <span class="sd">        :rtype: str</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="s1">'Addr(</span><span class="si">{}</span><span class="s1">)'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr_</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">"Address('</span><span class="si">{}</span><span class="s2">')"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr_</span><span class="p">)</span>
+
     <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">"""Сompares the object with the passed value.</span>
 
@@ -170,7 +176,7 @@
 <span class="sd">        :return: Result of check</span>
 <span class="sd">        :rtype: bool</span>
 <span class="sd">        """</span>
-        <span class="n">ensure_address</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="n">Address</span><span class="o">.</span><span class="n">ensure_address</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">str</span><span class="p">()</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">str</span><span class="p">()</span>
 
 <div class="viewcode-block" id="Address.str"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Address.str">[docs]</a>    <span class="k">def</span> <span class="nf">str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -197,7 +203,33 @@
 <span class="sd">        """</span>
         <span class="k">assert</span> <span class="n">eq</span><span class="p">(</span><span class="s1">':'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">addr_</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addr_</span> <span class="o">=</span> <span class="s1">'0'</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">addr_</span>
-        <span class="k">return</span> <span class="bp">self</span></div></div>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="Address.zero_addr"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Address.zero_addr">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">zero_addr</span><span class="p">(</span><span class="n">wc</span><span class="p">):</span>
+        <span class="sd">"""Creates a zero address instance in a given workchain.</span>
+
+<span class="sd">        :param num wc: Workchain ID</span>
+<span class="sd">        :return: Object</span>
+<span class="sd">        :rtype: Address</span>
+<span class="sd">        """</span>
+        <span class="n">addr</span> <span class="o">=</span> <span class="s1">'</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="s1">'0'</span><span class="o">*</span><span class="mi">64</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Address</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Address.ensure_address"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Address.ensure_address">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">ensure_address</span><span class="p">(</span><span class="n">addr</span><span class="p">):</span>
+        <span class="sd">"""Raises an error if a given object is not of :class:`Address &lt;Address&gt;` class.</span>
+
+<span class="sd">        :param Address addr: Object of class Address</span>
+<span class="sd">        """</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">addr</span><span class="p">,</span> <span class="n">Address</span><span class="p">),</span> <span class="n">red</span><span class="p">(</span><span class="s1">'Expected Address got </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">addr</span><span class="p">))</span></div></div>
+
+<div class="viewcode-block" id="ensure_address"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.ensure_address">[docs]</a><span class="k">def</span> <span class="nf">ensure_address</span><span class="p">(</span><span class="n">addr</span><span class="p">):</span>
+    <span class="sd">"""Raises an error if a given object is not of :class:`Address &lt;Address&gt;` class.</span>
+
+<span class="sd">    :param Address addr: Object of class Address</span>
+<span class="sd">    """</span>
+    <span class="n">Address</span><span class="o">.</span><span class="n">ensure_address</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="zero_addr"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.zero_addr">[docs]</a><span class="k">def</span> <span class="nf">zero_addr</span><span class="p">(</span><span class="n">wc</span><span class="p">):</span>
     <span class="sd">"""Creates a zero address instance in a given workchain.</span>
@@ -206,16 +238,7 @@
 <span class="sd">    :return: Object</span>
 <span class="sd">    :rtype: Address</span>
 <span class="sd">    """</span>
-    <span class="n">addr</span> <span class="o">=</span> <span class="s1">'</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="s1">'0'</span><span class="o">*</span><span class="mi">64</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">Address</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="ensure_address"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.ensure_address">[docs]</a><span class="k">def</span> <span class="nf">ensure_address</span><span class="p">(</span><span class="n">addr</span><span class="p">):</span>
-    <span class="sd">"""Raises an error if a given object is not of :class:`Address &lt;Address&gt;` class.</span>
-
-<span class="sd">    :param Address addr: Object of class Address</span>
-<span class="sd">    """</span>
-    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">addr</span><span class="p">,</span> <span class="n">Address</span><span class="p">),</span> <span class="n">red</span><span class="p">(</span><span class="s1">'Expected Address got </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">addr</span><span class="p">))</span></div>
-
+    <span class="k">return</span> <span class="n">Address</span><span class="o">.</span><span class="n">zero_addr</span><span class="p">(</span><span class="n">wc</span><span class="p">)</span></div>
 </pre></div>
       </article>
       <footer>

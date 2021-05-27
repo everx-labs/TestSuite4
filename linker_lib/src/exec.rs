@@ -123,6 +123,7 @@ pub fn apply_constructor(
     time_header: Option<String>,
     now: u64,
     lt: u64,
+    error_msg: &mut Option<String>,
 ) -> Result<StateInit, String> {
 
     let keypair = decode_private_key(&private_key);
@@ -159,6 +160,8 @@ pub fn apply_constructor(
         lt,
     );
 
+    *error_msg = result.info.error_msg.clone();
+
     if is_success_exit_code(result.info.exit_code) {
         // TODO: check that no action is fired. Add a test
         // TODO: remove constructor from dictionary of methods?
@@ -183,11 +186,10 @@ fn bounce_msg(
     msg: &MsgInfo,
 ) -> ExecutionResult2 {
 
-    let contract = gs.get_contract(&msg.src()).unwrap();
-
+    let contract = gs.get_contract(&msg.src());
     let mut msgs = vec![];
-    if msg.bounce() {
-        msgs.push(create_bounced_msg2(&gs, &msg, &contract.abi_info()));
+    if msg.bounce() && contract.is_some() {
+        msgs.push(create_bounced_msg2(&gs, &msg, &contract.unwrap().abi_info()));
     } else {
         increase_dummy_balance(gs, msg.dst(), msg.value());
     }
@@ -280,6 +282,8 @@ pub fn exec_contract_and_process_actions(
         gs.get_now(),
         gs.lt,
     );
+
+    gs.last_error_msg = result.info.error_msg.clone();
 
     result.info.inbound_msg_id = msg_info.id();
     gs.register_run_result(result.info.clone());
@@ -376,13 +380,19 @@ pub fn load_state_init(
 
     if let Some(ctor_params) = ctor_params {
         let time_header = gs.make_time_header();
+        if gs.trace {
+            println!("apply_constructor: {}", ctor_params);
+        }
+        let mut error_msg = None;
         let result = apply_constructor(
                         state_init, &abi_file, &abi_info, &ctor_params,
                         private_key.clone(),
                         trace, gs.trace_on,
                         time_header, gs.get_now(),
                         gs.lt,
+                        &mut error_msg,
                     );
+        gs.last_error_msg = error_msg;
         if result.is_err() {
             return Err(result.err().unwrap());
         }

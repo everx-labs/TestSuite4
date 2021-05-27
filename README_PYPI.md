@@ -1,4 +1,4 @@
-# TestSuite4 0.2.1
+# TestSuite4 0.3.0
 
 TestSuite4 is a framework designed to simplify development and testing of TON Contracts. It contains lightweight
 blockchain emulator making it easy to develop contracts in a TDD-friendly style.

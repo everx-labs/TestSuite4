@@ -26,11 +26,11 @@ ts4.init('contracts/', verbose = True)
 sender = ts4.BaseContract('tutorial10_1', {})
 
 # Register nickname to be used in the output
-ts4.register_nickname(sender.address(), 'Sender')
+ts4.register_nickname(sender.address, 'Sender')
 
 # Deploy a contract (receiver)
 receiver = ts4.BaseContract('tutorial10_2', {})
-ts4.register_nickname(receiver.address(), 'Receiver')
+ts4.register_nickname(receiver.address, 'Receiver')
 
 # Ensure that current value in the receiver contract is default
 assert eq(0, receiver.call_getter('m_value'))
@@ -40,7 +40,7 @@ value = 0xbeaf
 payload = sender.call_getter('encode', {'value': value})
 
 # Call receiver contract's method via sender contract
-sender.call_method('call_it', {'dest': receiver.address(), 'payload': payload})
+sender.call_method('call_it', {'dest': receiver.address, 'payload': payload})
 
 # Dispatch created internal message from sender to receiver
 ts4.dispatch_one_message()

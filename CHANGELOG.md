@@ -1,3 +1,33 @@
+## 25-05-2021: TestSuite4 0.3.0
+
+### BREAKING CHANGES
+
+- The following member functions of `BaseContract` transformed
+  into properties: `addr()`, `address()`, `balance()`, `keypair()`
+
+### New Features
+
+- Improved readability of verbose output
+- Implemented printing of text error message in case of unexpected exit_code
+- Added support for mappings in `call_getter`
+- Reworked the way to work with private and public keys
+- Added `keypair` parameter to BaseContract's constructor
+
+### Tutorials
+
+- Updated tutorials `01_getters`, `03_constructos` and `09_send_money`
+
+### Bugs and Issues
+
+- Added return to the `call_method_signed`
+- Fixed an issue with crash at self-destruction
+- Changed return type for `load_code_cell/load_data_cell` from string to `Cell`
+- Made `BaseContract.create_keypair()` deprecated
+- Changed behaviour of `decode_tuples` parameter
+- Added `G_DECODE_TUPLES` global variable
+- Added a type check in `Cell`'s constructor
+
+
 ## 15-04-2021: TestSuite4 0.2.1
 
 ### New Features

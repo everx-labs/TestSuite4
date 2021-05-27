@@ -22,9 +22,10 @@ eq = ts4.eq
 
 class Tut06(ts4.BaseContract):
     def __init__(self):
-        self.create_keypair()
-        # We pass a public key to the constructor that will identify the contract owner
-        super(Tut06, self).__init__('tutorial06', {}, pubkey = self.public_key_)
+        # Create a keypair
+        keypair = ts4.make_keypair()
+        # ... and pass it to the constructor to identify the contract owner
+        super(Tut06, self).__init__('tutorial06', {}, keypair = keypair)
 
     # Create a method to call setNumber without the owner's signature
     def setNumber(self, value, expect_ec = 0):
@@ -59,7 +60,7 @@ assert eq(t_number, tut06.call_getter('m_number'))
 
 # Set a new keypair in the contract that is different
 # from the one that the contract was deployed with
-tut06.create_keypair()
+(tut06.private_key_, tut06.public_key_) = ts4.make_keypair()
 
 # Сall the method by message that signed with foreign key
 # and expect an error because the owner's key validation failed

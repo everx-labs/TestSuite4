@@ -52,18 +52,23 @@ def test3():
 
 
 def test4():
-    (private_key, public_key) = ts4.make_keypair()
+    # Generating a pair of keys
+    keypair = ts4.make_keypair()
+
     t_number = 14613198
 
-    # Deploy a contract with given (by pubkey) owner.
+    # Deploy a contract with given (by public key) owner.
     # Private key is needed here only when constructor checks 
     # that message is signed.
-    tut = ts4.BaseContract('tutorial03_3', 
-        ctor_params = dict(t_number = t_number), 
-        pubkey      = public_key, 
-        private_key = private_key
+    tut = ts4.BaseContract('tutorial03_3',
+        ctor_params = dict(t_number = t_number),
+        keypair = keypair
     )
 
+    # Check the validity of the key pair
+    assert eq(keypair, tut.keypair)
+
+    # Call a getter and ensure that we received correct integer value
     assert eq(t_number, tut.call_getter('m_number'))
 
 

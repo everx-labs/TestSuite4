@@ -27,12 +27,20 @@ contract ContractTransfer {
         addr.transfer({ value: amount, body: payload });
     }
 
+    function send_grams_with_flags(address addr, uint128 amount, uint16 flags) public pure {
+        tvm.accept();
+        addr.transfer({ value: amount, flag: flags });
+    }
+
     onBounce(TvmSlice body) pure external {
         require(body.bits() == 0);
     }
 
     receive() external pure {
         TvmSlice data = msg.data;
-        emit Transfered(msg.value, data.decode(bytes));
+
+        if (!data.empty()) {
+            emit Transfered(msg.value, data.decode(bytes));
+        }
     }
 }
