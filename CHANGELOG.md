@@ -1,3 +1,50 @@
+## 27-07-2021: TestSuite4 0.4.0
+
+### BREAKING CHANGES
+
+- moved all globals to `ts4.globals` module
+- changed return type of `load_tvc()` to `Cell`
+- changed return type of `load_code_cell()` to `Cell`
+- changed return type of `load_data_cell()` to `Cell`
+
+### NEW
+
+- added `encode_message_body` function for encoding message
+- added error description for exit_code=76 (constructor was not called)
+- added support for static members initialization (initial data)
+- added `ts4.make_keypair(seed)` parameter to generate constant keys
+- added global decoder parameters config (`ts4.decoder`)
+- added `utils.either_or()` helper
+- added `Decoder` class with decoding parameters
+- added support for native strings in parameters (no need to call `str2bytes()`)
+- added `ts4.globals.G_DEFAULT_BALANCE`
+- implemented checking of ABI types and names when calling getters and methods
+
+### CHANGES
+
+- updated `tutorial01_getters.py`
+- updated `tutorial02_methods.py`
+- updated `tutorial09_send_money.py`
+- updated `tutorial10_encode_call.py`
+
+### FIXES
+
+- fixed bug in BalanceWatcher
+- fixed bug in reserved balance mode 0
+- fixed crash when account does not exist
+- fixed crash at duplicate deployment
+- fixed printing of Bytes in eq()
+- fixed Bytes comparision (uppercase vs lowercase)
+- fixed annoying problem with unclear message when misspellen parameters: `RuntimeError: cannot encode abi body: WrongDataFormat { val: Null }`
+
+### EXPERIMENTAL
+
+- implemented experimental G_AUTODISPATCH mode
+
+### OTHER
+
+- major python code refactoring!
+
 ## 25-05-2021: TestSuite4 0.3.0
 
 ### BREAKING CHANGES

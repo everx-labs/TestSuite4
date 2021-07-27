@@ -46,9 +46,9 @@ def test1():
     tut02.call_method('set_bytes', {'value': t_bytes})
     assert eq(t_bytes, tut02.call_getter('m_bytes'))
 
-    # String values are represented in hex, so we need to use `str2bytes()` helper.
+    # String values are automatically converted to hex back and forth
     t_string = 'coffeeАБВ'
-    tut02.call_method('set_string', {'value': ts4.str2bytes(t_string)})
+    tut02.call_method('set_string', {'value': t_string})
     # Call the getter and ensure that we received correct string value.
     assert eq(t_string, tut02.call_getter('m_string'))
 

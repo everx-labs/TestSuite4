@@ -1,4 +1,5 @@
 import sys
+import re
 import binascii
 
 class BColors:
@@ -103,6 +104,12 @@ def eq(v1, v2, dismiss = False, msg = None, xtra = ''):
         return True
     else:
         msg = '' if msg is None else msg + ' '
+        v1 = v1.__repr__()
+        v2 = v2.__repr__()
         print(msg + red('exp: {}, got: {}.'.format(v1, v2)) + xtra)
         return True if dismiss else False
+
+def either_or(value, default):
+    return value if value is not None else default
+
 

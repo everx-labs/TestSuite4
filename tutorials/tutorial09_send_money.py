@@ -98,7 +98,7 @@ def test2():
     # Send grams to the recipient without payload
     amount = 2 * ts4.GRAM
     comment = 'some comment'
-    params = dict(addr = addr_recipient, amount = amount, comment = ts4.str2bytes(comment))
+    params = dict(addr = addr_recipient, amount = amount, comment = comment)
     sender.call_method('send_grams_with_payload', params)
 
     # Dispatch created message

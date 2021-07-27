@@ -84,12 +84,12 @@ answer = tut01.call_getter('get_tuple')
 print(ts4.cyan(answer))
 assert eq((111,222,333), answer)
 
-# But if you want to obtain a named structure, you can use `decode_tuples` parameter
+# But if you want to obtain a named structure, you can use `decoder` parameter
 expected_dict = dict(one = 111, two = 222, three = 333)
-assert eq(expected_dict, tut01.call_getter('get_tuple', decode_tuples = False))
+assert eq(expected_dict, tut01.call_getter('get_tuple', decoder = ts4.Decoder(tuples = False)))
 
 # Alternatively you can set this mode globally
-ts4.G_DECODE_TUPLES = False
+ts4.globals.G_DECODE_TUPLES = False
 assert eq(expected_dict, tut01.call_getter('get_tuple'))
 
 # mappings

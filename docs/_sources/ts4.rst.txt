@@ -13,6 +13,7 @@ Main Interface
 .. autofunction:: init
 .. autofunction:: set_verbose
 .. autofunction:: set_stop_at_crash
+.. autofunction:: set_config_param
 .. autofunction:: verbose_
 .. autofunction:: verbose
 .. autofunction:: reset_all
@@ -70,6 +71,8 @@ Other
 .. autofunction:: set_tests_path
 .. autofunction:: str2bytes
 .. autofunction:: bytes2str
+.. autofunction:: sign_cell
+
 
 Classes
 -------
@@ -81,6 +84,18 @@ Address
 ^^^^^^^
 .. autoclass:: tonos_ts4.ts4.Address
 
+Bytes
+^^^^^
+.. autoclass:: tonos_ts4.ts4.Bytes
+
+Cell
+^^^^
+.. autoclass:: tonos_ts4.ts4.Cell
+
 Msg
 ^^^
 .. autoclass:: tonos_ts4.ts4.Msg
+
+Decoder
+^^^^^^^
+.. autoclass:: tonos_ts4.ts4.Decoder
