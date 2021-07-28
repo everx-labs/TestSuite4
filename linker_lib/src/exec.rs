@@ -18,6 +18,10 @@ use ton_block::{
     GetRepresentationHash,
 };
 
+use ton_types::{
+    Cell,
+};
+
 use crate::util::{
     decode_address, load_from_file, get_msg_value,
     convert_address,
@@ -56,6 +60,7 @@ use crate::debug_info::{
 #[derive(Default)]
 pub struct ExecutionResult2 {
     exit_code: i32,
+    aborted: bool,
     out_actions: Vec<String>,
     gas: i64,
     info: Option<String>,
@@ -69,11 +74,18 @@ impl ExecutionResult2 {
     fn with_actions(result: ExecutionResult, out_actions: Vec<String>) -> ExecutionResult2 {
         ExecutionResult2 {
             exit_code:   result.info.exit_code,
+            aborted:     false,
             gas:         result.info.gas,
             info:        result.info_msg,
             trace:       result.trace,
             out_actions: out_actions,
         }
+    }
+    fn with_aborted(reason: String) -> ExecutionResult2 {
+        let mut res = ExecutionResult2::default();
+        res.aborted = true;
+        res.info = Some(reason);
+        res
     }
 }
 
@@ -230,6 +242,9 @@ pub fn dispatch_message_impl(
     let address = msg_info.dst();
 
     if let Some(state_init) = ton_msg.state_init() {
+        if gs.address_exists(&address) {
+            return bounce_msg(gs, msg_info);
+        }
         let wc = address.workchain_id() as i8;
         deploy_contract_impl(gs, None, state_init.clone(), None, AbiInfo::default(), wc, 0).unwrap();
     }
@@ -300,9 +315,36 @@ pub fn exec_contract_and_process_actions(
         msg_info.value(),
     );
 
-    let out_actions = gs.add_messages(msgs);
+    if let Err(reason) = msgs {
+        return ExecutionResult2::with_aborted(reason);
+    }
+
+    let out_actions = gs.add_messages(msgs.unwrap());
 
     ExecutionResult2::with_actions(result, out_actions)
+}
+
+pub fn encode_message_body_impl(
+    abi_info: &AbiInfo,
+    method: String,
+    params: String,
+) -> Result<Cell, String> {
+    let body = build_abi_body(
+        abi_info,
+        &method,
+        &params,
+        None,
+        true,
+        None,
+    );
+
+    if body.is_err() {
+        return Err(body.err().unwrap());
+    }
+    
+    let cell = body.unwrap().into_cell();
+    
+    Ok(cell.unwrap())
 }
 
 pub fn call_contract_impl(
@@ -317,7 +359,14 @@ pub fn call_contract_impl(
     // TODO: Too long function
     let addr = decode_address(&address_str);
 
-    let contract_info = gs.get_contract(&addr).unwrap();
+    let contract_info = gs.get_contract(&addr);
+
+    if contract_info.is_none() {
+        let err = format!("Account does not exist: {}", addr);
+        return Err(err);
+    }
+
+    let contract_info = contract_info.unwrap();
 
     if gs.trace {
         println!("encode_function_call(\"{}\",\"{}\")", method, params);
@@ -366,6 +415,7 @@ pub fn load_state_init(
     abi_file: &String,
     abi_info: &AbiInfo,
     ctor_params: &Option<String>,
+    initial_data: &Option<String>,
     pubkey: &Option<String>,
     private_key: &Option<String>,
     trace: bool,
@@ -376,6 +426,16 @@ pub fn load_state_init(
         if result.is_err() {
             return Err(result.err().unwrap());
         }
+    }
+
+    if let Some(initial_data) = initial_data {
+        let new_data = ton_abi::json_abi::update_contract_data(
+            abi_info.text(),
+            &initial_data,
+            state_init.data.clone().unwrap_or_default().into(),
+        ).map_err(|e| e.to_string())?;
+
+        state_init.set_data(new_data.into_cell());
     }
 
     if let Some(ctor_params) = ctor_params {

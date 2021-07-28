@@ -128,7 +128,7 @@ pub fn call_contract_ex(
     let mut stack = Stack::new();
     if func_selector > -2 {     // internal or external
         let msg = msg_info.ton_msg().unwrap();
-        let msg_cell = StackItem::Cell(msg.clone().write_to_new_cell().unwrap().into());
+        let msg_cell = StackItem::Cell(msg.serialize().unwrap().into());
 
         let body: SliceData = match msg.body() {
             Some(b) => b.into(),
@@ -274,7 +274,7 @@ fn initialize_registers(
     config_params: Option<Cell>,
 ) -> SaveList {
     let mut ctrls = SaveList::new();
-    let mut info = SmartContractInfo::with_myself(myself.write_to_new_cell().unwrap().into());
+    let mut info = SmartContractInfo::with_myself(myself.serialize().unwrap().into());
     *info.balance_remaining_grams_mut() = balance.0 as u128;
     *info.balance_remaining_other_mut() = balance.1.other_as_hashmap().clone();
     *info.unix_time_mut() = now as u32;

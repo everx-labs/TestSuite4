@@ -87,7 +87,7 @@ impl AbiInfo {
         };
         Ok(abi_info)
     }
-    fn text(&self) -> &String {
+    pub fn text(&self) -> &String {
         &self.text
     }
 }

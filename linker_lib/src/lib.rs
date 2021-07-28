@@ -59,6 +59,7 @@ use exec::{
     deploy_contract_impl,
     call_contract_impl,
     load_state_init,
+    encode_message_body_impl,
 };
 
 use serde_json::Value as JsonValue;
@@ -68,6 +69,8 @@ use ed25519_dalek::{
 };
 
 use rand::rngs::OsRng;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -101,6 +104,7 @@ fn deploy_contract(
     contract_file: String,
     abi_file: String,
     ctor_params: Option<String>,
+    initial_data: Option<String>,
     pubkey: Option<String>,
     private_key: Option<String>,
     wc: i8,
@@ -119,6 +123,7 @@ fn deploy_contract(
         &abi_file,
         &abi_info,
         &ctor_params,
+        &initial_data,
         &pubkey,
         &private_key,
         trace,
@@ -319,9 +324,17 @@ fn reset_all() -> PyResult<()> {
 }
 
 #[pyfunction]
-fn make_keypair() -> PyResult<(String, String)> {
-    let mut csprng = OsRng{};
-    let keypair = Keypair::generate(&mut csprng);
+fn make_keypair(seed : Option<u64>) -> PyResult<(String, String)> {
+    let keypair = match seed {
+        Some(seed) => {
+            let mut csprng = StdRng::seed_from_u64(seed);
+            Keypair::generate(&mut csprng)
+        },
+        None => {
+            let mut csprng = OsRng{};
+            Keypair::generate(&mut csprng)
+        }
+    };
     let secret = keypair.to_bytes();
     let secret = hex::encode(secret.to_vec());
     let public = hex::encode(keypair.public.to_bytes());
@@ -390,6 +403,16 @@ fn load_data_cell(filename: String) -> PyResult<String> {
     Ok(base64::encode(&bytes))
 }
 
+#[pyfunction]
+fn encode_message_body(abi_file: String, method: String, params: String) -> PyResult<String> {
+    let mut gs = GLOBAL_STATE.lock().unwrap();
+    let abi_info = gs.all_abis
+        .from_file(&abi_file)
+        .map_err(|e| PyRuntimeError::new_err(e))?;
+    let cell = encode_message_body_impl(&abi_info, method, params);
+    let result = serialize_toc(&cell.unwrap()).unwrap();
+    Ok(base64::encode(&result))
+}
 /////////////////////////////////////////////////////////////////////////////////////
 /// A Python module implemented in Rust.
 #[pymodule]
@@ -416,6 +439,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(sign_cell))?;
     m.add_wrapped(wrap_pyfunction!(load_code_cell))?;
     m.add_wrapped(wrap_pyfunction!(load_data_cell))?;
+    m.add_wrapped(wrap_pyfunction!(encode_message_body))?;
 
     m.add_wrapped(wrap_pyfunction!(get_all_runs))?;
     m.add_wrapped(wrap_pyfunction!(get_all_messages))?;

@@ -48,6 +48,7 @@ struct ActionsProcessor {
     reserved_balance: u64,
     destroy: bool,
     msg_value: u64,
+    verbose: bool,
 }
 
 pub fn process_actions(
@@ -56,7 +57,7 @@ pub fn process_actions(
     result: &ExecutionResult,
     method: Option<String>,
     msg_value: Option<u64>,
-) -> Vec<MsgInfo> {
+) -> Result<Vec<MsgInfo>, String> {
 
     // let mut msg_value = msg_value.unwrap_or_default();
 
@@ -67,6 +68,7 @@ pub fn process_actions(
 
     let mut msgs = vec![];
     let mut state = ActionsProcessor::default();
+    state.verbose = gs.trace;
     state.balance = contract_info.balance();
     state.msg_value = msg_value.unwrap_or_default();
 
@@ -76,7 +78,7 @@ pub fn process_actions(
         if let Some(msg_info) = process_action(
                  gs, act, &address, &mut state, &method,
                 &abi_info, 
-        ) {
+        )? {
             msgs.push(msg_info);
         }
     }
@@ -97,31 +99,35 @@ pub fn process_actions(
         gs.set_contract(address, contract_info);
     }
 
-    msgs
+    Ok(msgs)
 }
 
 impl ActionsProcessor {
     
-    fn decrease_balance(&mut self, value: u64) {
+    fn decrease_balance(&mut self, value: u64) -> Result<(), String> {
         let error_str = "\n!!!!!!!!!!!! Message makes balance negative !!!!!!!!!!!!!\nBalance:   ".to_string();
         // TODO!: refactor, handle error
-        if self.balance < value {
-            // TODO: add a test
-            println!("{}{b:>w1$}\nMsg value: {v:>w2$}\n", error_str, b = self.balance, w1 = 19, v = value, w2 = 19);
-            assert!(self.balance >= value);
+        if self.balance < value + self.reserved_balance {
+            if self.verbose {
+                println!("{}{b:>w1$}\nMsg value: {v:>w2$}, reserved = {r}\n", 
+                    error_str, b = self.balance, w1 = 19, v = value, w2 = 19, r = self.reserved_balance);
+            }
+            return Err("not enough funds".to_string());
         }
         self.balance -= value;
+        Ok(())
     }
     
-    fn process_send_msg(&mut self, mode: u8, out_msg: &TonBlockMessage) -> u64 {
+    fn process_send_msg(&mut self, mode: u8, out_msg: &TonBlockMessage) -> Result<u64, String> {
+        // TODO: why not to pass the value instead of `out_msg`?
         if let Some(value) = get_msg_value(&out_msg) {
-            self.decrease_balance(value);
+            self.decrease_balance(value)?;
         }
 
         let mut additional_value = 0;
         if mode == 64 {
             // send money back
-            self.decrease_balance(self.msg_value);
+            self.decrease_balance(self.msg_value)?;
             additional_value = self.msg_value;
             self.msg_value = 0;
         }
@@ -137,7 +143,7 @@ impl ActionsProcessor {
             // self-destroy
             self.destroy = true;
         }
-        additional_value
+        Ok(additional_value)
     }
 }
 
@@ -148,7 +154,7 @@ fn process_action(
     state: &mut ActionsProcessor,
     method: &Option<String>,
     abi_info: &AbiInfo,
-) -> Option<MsgInfo> {
+) -> Result<Option<MsgInfo>, String> {
     // TODO!: refactor this function! Too many parameters
     // TODO: remove .clone()
     match action.clone() {
@@ -157,14 +163,14 @@ fn process_action(
                 println!("Action(SendMsg):");
             }
 
-            let additional_value = state.process_send_msg(mode, &out_msg);
+            let additional_value = state.process_send_msg(mode, &out_msg)?;
             let out_msg = substitute_address(out_msg, &address);
 
             // TODO: is this code needed here? Should it be moved?
             let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value);
             let msg_info2 = MsgInfo::create(out_msg, j);
 
-            return Some(msg_info2);
+            return Ok(Some(msg_info2));
         },
         OutAction::SetCode { new_code } => {
             if gs.trace {
@@ -195,6 +201,6 @@ fn process_action(
         },
         _ => println!("Action(Unknown)"),
     };
-    None
+    Ok(None)
 }
 

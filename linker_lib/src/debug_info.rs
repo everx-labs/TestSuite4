@@ -111,7 +111,7 @@ pub fn load_debug_info(
 
     for func in debug_info_json.internals.iter() {
         let id = &(func.id as i32);
-        let key = id.clone().write_to_new_cell().unwrap().into();
+        let key = id.write_to_new_cell().unwrap().into_cell().unwrap().into();
         let val = dict1.get(key).unwrap();
         if val.is_some() {
             let val = val.unwrap();
@@ -131,7 +131,7 @@ pub fn load_debug_info(
 
     for func in debug_info_json.publics.iter() {
         let id = &(func.id as u32);
-        let key = id.clone().write_to_new_cell().unwrap().into();
+        let key = id.write_to_new_cell().unwrap().into_cell().unwrap().into();
         let val = dict1.get(key).unwrap();
         if val.is_some() {
             let val = val.unwrap();
@@ -151,7 +151,7 @@ pub fn load_debug_info(
 
     for func in debug_info_json.privates.iter() {
         let id = &(func.id as u32);
-        let key = id.clone().write_to_new_cell().unwrap().into();
+        let key = id.write_to_new_cell().unwrap().into_cell().unwrap().into();
         if let Some(val) = dict2.get(key).unwrap() {
             set_function_hashes(&mut hash2function, &func.name, &val.cell());
         }
