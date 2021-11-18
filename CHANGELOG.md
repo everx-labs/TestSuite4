@@ -1,3 +1,24 @@
+## 09-11-2021: TestSuite4 0.4.1
+
+### NEW
+
+- ABI 2.1: support for Optional type and strings
+- added `ts4.core.get_now`
+- added support for string seed in `make_keypair()`
+- added `save_keypair()` and `load_keypair()`
+- added `gen_addr(name, initial_data, keypair, wc)`
+- added more error description for exit codes (ec=51,52,60...)
+- added `ts4.globals.G_SHOW_GETTERS` setting
+- removed obsolete `ts4.globals.G_DECODE_TUPLES`
+
+### CHANGES
+
+- updated `tutorial07_time.py`
+
+### FIXES
+
+- fixed an issue with loading from '.boc'
+
 ## 27-07-2021: TestSuite4 0.4.0
 
 ### BREAKING CHANGES

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="prev" title="List of tutorials" href="tutorials.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>Developer Interface - TestSuite4 v0.4.0</title>
+        <title>Developer Interface - TestSuite4 v0.4.1</title>
       <link rel="stylesheet" href="_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="index.html"><div class="brand">TestSuite4 v0.4.0</div></a>
+      <a href="index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.0</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -472,8 +472,7 @@ If callback returns False then the given message is skipped.</p>
 <dl class="py function">
 <dt id="tonos_ts4.ts4.load_code_cell">
 <code class="sig-name descname"><span class="pre">load_code_cell</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tonos_ts4/global_functions.html#load_code_cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tonos_ts4.ts4.load_code_cell" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads contract code cell from a compiled contract image with a given name.
-Returns cell encoded to string.</p>
+<dd><p>Loads contract code cell from a compiled contract image with a given name.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>fn</strong> (<em>str</em>) – The file name</p>
@@ -489,8 +488,7 @@ Returns cell encoded to string.</p>
 <dl class="py function">
 <dt id="tonos_ts4.ts4.load_data_cell">
 <code class="sig-name descname"><span class="pre">load_data_cell</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tonos_ts4/global_functions.html#load_data_cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tonos_ts4.ts4.load_data_cell" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads contract data cell from a compiled contract image with a given name.
-Returns cell encoded to string</p>
+<dd><p>Loads contract data cell from a compiled contract image with a given name.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>fn</strong> (<em>str</em>) – The file name</p>
@@ -542,7 +540,7 @@ This name is used in verbose output.</p>
 <dd><p>Generates random keypair.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>seed</strong> (<em>num</em>) – Seed to be used to generate keys. Useful when constant keypair is needed</p>
+<dd class="field-odd"><p><strong>seed</strong> (<em>str</em>) – Seed to be used to generate keys. Useful when constant keypair is needed</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>The key pair</p>
@@ -660,7 +658,7 @@ for deploying contracts and interaction with deployed contracts.</p>
 If None, constructor is not called and can be called with
 separate <cite>call_method()</cite> call (onchain constructed)</p></li>
 <li><p><strong>wc</strong> (<em>num</em>) – workchain_id to deploy contract to</p></li>
-<li><p><strong>initial_data</strong> (<em>dict</em>) – Initial data for the contract (static members).</p></li>
+<li><p><strong>initial_data</strong> (<em>dict</em>) – Initial data for the contract (static members)</p></li>
 <li><p><strong>address</strong> (<a class="reference internal" href="#tonos_ts4.ts4.Address" title="tonos_ts4.ts4.Address"><em>Address</em></a>) – If this parameter is specified no new contract is created
 but instead a wrapper for an existing contract is created</p></li>
 <li><p><strong>override_address</strong> (<a class="reference internal" href="#tonos_ts4.ts4.Address" title="tonos_ts4.ts4.Address"><em>Address</em></a>) – When specified this address will be used for deploying
@@ -905,7 +903,7 @@ Address entity.</p>
 </dd></dl>
 <dl class="py method">
 <dt id="tonos_ts4.ts4.Address.zero_addr">
-<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">zero_addr</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tonos_ts4/address.html#Address.zero_addr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tonos_ts4.ts4.Address.zero_addr" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">zero_addr</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">wc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tonos_ts4/address.html#Address.zero_addr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tonos_ts4.ts4.Address.zero_addr" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a zero address instance in a given workchain.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1128,7 +1126,20 @@ Address entity.</p>
 <dl class="py method">
 <dt id="tonos_ts4.ts4.Msg.is_bounced">
 <code class="sig-name descname"><span class="pre">is_bounced</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tonos_ts4/address.html#Msg.is_bounced"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tonos_ts4.ts4.Msg.is_bounced" title="Permalink to this definition">¶</a></dt>
-<dd><p>Checks if a current message is bounced.</p>
+<dd><p>Checks if the given message is bounced.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Result of check</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt id="tonos_ts4.ts4.Msg.is_getter">
+<code class="sig-name descname"><span class="pre">is_getter</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/tonos_ts4/address.html#Msg.is_getter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tonos_ts4.ts4.Msg.is_getter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if the given message is a getter call.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>Result of check</p>

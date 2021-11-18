@@ -72,13 +72,15 @@ class Address:
         return self
 
     @staticmethod
-    def zero_addr(wc):
+    def zero_addr(wc = 0):
         """Creates a zero address instance in a given workchain.
 
         :param num wc: Workchain ID
         :return: Object
         :rtype: Address
         """
+        if wc is None: wc = 0
+
         addr = '{}:{}'.format(wc, '0'*64)
         return Address(addr)
 
@@ -266,12 +268,20 @@ class Msg:
         return self.type == 'unknown'
 
     def is_bounced(self):
-        """Checks if a current message is bounced.
+        """Checks if the given message is bounced.
 
         :return: Result of check
         :rtype: bool
         """
         return self.type == 'bounced'
+
+    def is_getter(self):
+        """Checks if the given message is a getter call.
+
+        :return: Result of check
+        :rtype: bool
+        """
+        return self.type == 'call_getter'
 
     def dump_data(self):
         """Dumps message data.

@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.global_functions - TestSuite4 v0.4.0</title>
+        <title>tonos_ts4.global_functions - TestSuite4 v0.4.1</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.0</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.0</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -138,6 +138,7 @@
         <h1>Source code for tonos_ts4.global_functions</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="nb">globals</span> <span class="k">as</span> <span class="n">g</span>
 <span class="kn">from</span> <span class="nn">.globals</span> <span class="kn">import</span> <span class="n">GRAM</span><span class="p">,</span> <span class="n">EMPTY_CELL</span>
@@ -328,21 +329,88 @@
             <span class="n">s</span> <span class="o">=</span> <span class="s1">'Addr(</span><span class="si">{}</span><span class="s1">)'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">s</span>
 
+<span class="k">def</span> <span class="nf">gen_addr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">initial_data</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">keypair</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">wc</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+    <span class="sd">"""Generates contract addresss.</span>
+
+<span class="sd">    :param str name: Name used to load contract's bytecode and ABI</span>
+<span class="sd">    :param dict initial_data: Initial data for the contract (static members)</span>
+<span class="sd">    :param keypair: Keypair containing private and public keys</span>
+<span class="sd">    :param num wc: workchain_id to deploy contract to</span>
+<span class="sd">    :return: Expected contract address</span>
+<span class="sd">    :rtype: Address</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">keypair</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># TODO: copy-paste below!</span>
+        <span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="n">pubkey</span><span class="p">)</span> <span class="o">=</span> <span class="n">keypair</span>
+        <span class="k">if</span> <span class="n">pubkey</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">pubkey</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'0x'</span>
+            <span class="n">pubkey</span> <span class="o">=</span> <span class="n">pubkey</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'0x'</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">private_key</span><span class="p">,</span> <span class="n">pubkey</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">abi</span> <span class="o">=</span> <span class="n">Abi</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">initial_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">initial_data</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="n">abi</span><span class="p">,</span> <span class="s1">'.data'</span><span class="p">,</span> <span class="n">initial_data</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">gen_addr</span><span class="p">(</span>
+            <span class="n">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">'.tvc'</span><span class="p">),</span>
+            <span class="n">abi</span><span class="o">.</span><span class="n">path_</span><span class="p">,</span>
+            <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">initial_data</span><span class="p">)</span> <span class="k">if</span> <span class="n">initial_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">pubkey</span><span class="p">,</span>
+            <span class="n">private_key</span><span class="p">,</span>
+            <span class="n">wc</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">Address</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
 <div class="viewcode-block" id="make_keypair"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.make_keypair">[docs]</a><span class="k">def</span> <span class="nf">make_keypair</span><span class="p">(</span><span class="n">seed</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="sd">"""Generates random keypair.</span>
 
-<span class="sd">    :param num seed: Seed to be used to generate keys. Useful when constant keypair is needed</span>
+<span class="sd">    :param str seed: Seed to be used to generate keys. Useful when constant keypair is needed</span>
 <span class="sd">    :return: The key pair</span>
 <span class="sd">    :rtype: (str, str)</span>
 <span class="sd">    """</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">hash</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">seed</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">'utf-8'</span><span class="p">))</span>
+        <span class="n">seed</span> <span class="o">=</span> <span class="n">decode_int</span><span class="p">(</span><span class="s1">'0x'</span> <span class="o">+</span> <span class="nb">hash</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">())</span>
+        <span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">64</span><span class="p">)</span>
     <span class="p">(</span><span class="n">secret_key</span><span class="p">,</span> <span class="n">public_key</span><span class="p">)</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">make_keypair</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
     <span class="n">public_key</span> <span class="o">=</span> <span class="s1">'0x'</span> <span class="o">+</span> <span class="n">public_key</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">secret_key</span><span class="p">,</span> <span class="n">public_key</span><span class="p">)</span></div>
 
+<span class="k">def</span> <span class="nf">save_keypair</span><span class="p">(</span><span class="n">keypair</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="sd">"""Saves keypair to file.</span>
+
+<span class="sd">    :param keypair: Keypair to be saved</span>
+<span class="sd">    :param str filename: File name</span>
+<span class="sd">    """</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">public</span> <span class="o">=</span> <span class="n">keypair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'0x'</span><span class="p">,</span> <span class="s1">''</span><span class="p">),</span>
+        <span class="n">secret</span> <span class="o">=</span> <span class="n">keypair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="nb">str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">indent</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">load_keypair</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">"""Loads keypair from a file.</span>
+
+<span class="sd">    :param str filename: File name</span>
+<span class="sd">    :return: The loaded keypair</span>
+<span class="sd">    :rtype: (str, str)</span>
+<span class="sd">    """</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">'rt'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">public</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s1">'public'</span><span class="p">]</span>
+    <span class="n">secret</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="s1">'secret'</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="s1">'0x'</span> <span class="o">+</span> <span class="n">public</span><span class="p">)</span>
+
 <span class="k">def</span> <span class="nf">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ext</span><span class="p">):</span>
     <span class="n">fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">globals</span><span class="o">.</span><span class="n">G_TESTS_PATH</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">fn</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ext</span><span class="p">):</span>
-        <span class="n">fn</span> <span class="o">+=</span> <span class="n">ext</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">fn</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">'.boc'</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">fn</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ext</span><span class="p">):</span>
+            <span class="n">fn</span> <span class="o">+=</span> <span class="n">ext</span>
     <span class="k">return</span> <span class="n">fn</span>
 
 <span class="c1"># TODO: Shouldn't this function return Cell?</span>
@@ -360,7 +428,6 @@
 
 <div class="viewcode-block" id="load_code_cell"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.load_code_cell">[docs]</a><span class="k">def</span> <span class="nf">load_code_cell</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
     <span class="sd">"""Loads contract code cell from a compiled contract image with a given name.</span>
-<span class="sd">    Returns cell encoded to string.</span>
 
 <span class="sd">    :param str fn: The file name</span>
 <span class="sd">    :return: Cell object containing contract's code cell</span>
@@ -371,7 +438,6 @@
 
 <div class="viewcode-block" id="load_data_cell"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.load_data_cell">[docs]</a><span class="k">def</span> <span class="nf">load_data_cell</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
     <span class="sd">"""Loads contract data cell from a compiled contract image with a given name.</span>
-<span class="sd">    Returns cell encoded to string</span>
 
 <span class="sd">    :param str fn: The file name</span>
 <span class="sd">    :return: Cell object containing contract's data cell</span>
@@ -477,10 +543,9 @@
 <span class="sd">    :param str new_abi_name: Name of the file containing the ABI</span>
 <span class="sd">    """</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">contract</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseContract</span><span class="p">)</span>
-    <span class="n">fn</span> <span class="o">=</span> <span class="n">make_path</span><span class="p">(</span><span class="n">new_abi_name</span><span class="p">,</span> <span class="s1">'.abi.json'</span><span class="p">)</span>
-    <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">set_contract_abi</span><span class="p">(</span><span class="n">contract</span><span class="o">.</span><span class="n">addr</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="n">fn</span><span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s1">'rb'</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-        <span class="n">contract</span><span class="o">.</span><span class="n">abi_</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span></div>
+
+    <span class="n">contract</span><span class="o">.</span><span class="n">abi</span> <span class="o">=</span> <span class="n">Abi</span><span class="p">(</span><span class="n">new_abi_name</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">set_contract_abi</span><span class="p">(</span><span class="n">contract</span><span class="o">.</span><span class="n">addr</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="n">contract</span><span class="o">.</span><span class="n">abi</span><span class="o">.</span><span class="n">path_</span><span class="p">)</span></div>
 
 
 <span class="c1">#########################################################################################################</span>

@@ -35,7 +35,11 @@ assert eq(False, tut07.call_getter('isUnlocked'))
 
 DAY = 86400
 # Fast forward 7 days
-ts4.core.set_now(now + 7 * DAY)
+one_week_later = now + 7 * DAY
+ts4.core.set_now(one_week_later)
+
+# Ensure that the time was rewound correctly
+assert eq(ts4.core.get_now(), one_week_later)
 
 # ... and ensure that the required time has come
 assert eq(True, tut07.call_getter('isUnlocked'))

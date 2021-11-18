@@ -89,6 +89,13 @@ impl ExecutionResult2 {
     }
 }
 
+pub fn generate_contract_address(
+    state_init: &StateInit,
+    wc: i8,
+) -> MsgAddressInt {
+    return convert_address(state_init.hash().unwrap(), wc);
+}
+
 pub fn deploy_contract_impl(
     gs: &mut GlobalState,
     contract_name: Option<String>,
@@ -99,7 +106,7 @@ pub fn deploy_contract_impl(
     mut balance: u64
 ) -> Result<String, String> {
 
-    let address0 = convert_address(state_init.hash().unwrap(), wc);
+    let address0 = generate_contract_address(&state_init, wc);
     let address = address.unwrap_or(address0);
     // println!("address = {:?}", address);
 

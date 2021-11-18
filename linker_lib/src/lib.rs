@@ -55,6 +55,7 @@ use messages::{
 
 use exec::{
     exec_contract_and_process_actions,
+    generate_contract_address,
     dispatch_message_impl,
     deploy_contract_impl,
     call_contract_impl,
@@ -97,6 +98,39 @@ fn set_trace(trace: bool) -> PyResult<()> {
 fn trace_on() -> PyResult<()> {
     GLOBAL_STATE.lock().unwrap().trace_on = true;
     Ok(())
+}
+
+#[pyfunction]
+fn gen_addr(
+    contract_file: String,
+    abi_file: String,
+    initial_data: Option<String>,
+    pubkey: Option<String>,
+    private_key: Option<String>,
+    wc: i8
+) -> PyResult<String> {
+    let mut gs = GLOBAL_STATE.lock().unwrap();
+    let trace = gs.trace;
+
+    let abi_info = gs.all_abis.from_file(&abi_file)
+                     .map_err(|e| PyRuntimeError::new_err(e))?;
+
+    let state_init = load_state_init(
+        &mut gs,
+        &contract_file,
+        &abi_file,
+        &abi_info,
+        &None,  // ctor_params
+        &initial_data,
+        &pubkey,
+        &private_key,
+        trace,
+    ).map_err(|e| PyRuntimeError::new_err(e))?;
+    
+    let addr = generate_contract_address(&state_init, wc);
+    let addr_str = format!("{}", addr);
+
+    Ok(addr_str)
 }
 
 #[pyfunction]
@@ -295,6 +329,14 @@ fn set_now(now: u64) -> PyResult<()> {
 }
 
 #[pyfunction]
+fn get_now() -> PyResult<u64> {
+    let gs = GLOBAL_STATE.lock().unwrap();
+    let result = gs.get_now();
+
+    Ok(result)
+}
+
+#[pyfunction]
 fn set_config_param(idx: u32, cell: String) -> PyResult<()> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
 
@@ -420,6 +462,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(reset_all))?;
 
     m.add_wrapped(wrap_pyfunction!(deploy_contract))?;
+    m.add_wrapped(wrap_pyfunction!(gen_addr))?;
     m.add_wrapped(wrap_pyfunction!(call_contract))?;
     m.add_wrapped(wrap_pyfunction!(call_ticktock))?;
     m.add_wrapped(wrap_pyfunction!(log_str))?;
@@ -430,6 +473,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(dispatch_message))?;
 
     m.add_wrapped(wrap_pyfunction!(set_now))?;
+    m.add_wrapped(wrap_pyfunction!(get_now))?;
     m.add_wrapped(wrap_pyfunction!(set_trace))?;
     m.add_wrapped(wrap_pyfunction!(trace_on))?;
     m.add_wrapped(wrap_pyfunction!(set_contract_abi))?;
