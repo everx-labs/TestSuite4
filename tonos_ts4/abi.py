@@ -133,6 +133,10 @@ def check_method_params(abi, method, params):
     for param in inputs:
         pname = param['name']
         if pname not in params:
+            # the default for 'responsible' functions
+            if pname == 'answerId':
+                res[pname] = 0
+                continue
             # ts4.verbose('Raising exception')
             if globals.G_VERBOSE:
                 print('params =', params)
