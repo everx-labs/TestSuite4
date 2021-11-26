@@ -32,7 +32,7 @@ class Decoder:
         
     @staticmethod
     def defaults():
-        return Decoder(ints = True, strings = True)
+        return Decoder(ints = True, strings = True, tuples = True)
         
     def fill_nones(self, other):
         return Decoder(
@@ -63,6 +63,9 @@ def decode_json_value(value, abi_type, decoder):
     if type == 'cell':
         return Cell(value)
 
+    if type == 'string':
+        return value
+
     if type == 'bytes':
         return bytes2str(value) if decoder.strings else Bytes(value)
 
@@ -80,10 +83,7 @@ def decode_json_value(value, abi_type, decoder):
     m = re.match(r'^map\((.*),(.*)\)$', type)
     if m:
         key_type = m.group(1)
-        val_type = dict(name = None, type = m.group(2))
-        if 'components' in abi_type.raw_:
-            val_type['components'] = abi_type.raw_['components']
-        val_type = AbiType(val_type)
+        val_type = create_AbiType(m.group(2), abi_type)
         res = dict()
         for k in value.keys():
             if key_type == 'address':
@@ -92,6 +92,15 @@ def decode_json_value(value, abi_type, decoder):
                 key = decode_int(k)
             res[key] = decode_json_value(value[k], val_type, decoder)
         return res
+
+    m = re.match(r'^optional\((.*)\)$', type)
+    if m:
+        if value is None:
+            return None
+        val_type = create_AbiType(m.group(1), abi_type)
+        res = decode_json_value(value, val_type, decoder)
+        return res
+
 
     print(type, value)
     ts4.verbose_("Unsupported type '{}'".format(type))

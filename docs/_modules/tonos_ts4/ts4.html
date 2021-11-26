@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.ts4 - TestSuite4 v0.4.0</title>
+        <title>tonos_ts4.ts4 - TestSuite4 v0.4.1</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.0</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.0</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -163,7 +163,7 @@
 <span class="kn">from</span> <span class="nn">.global_functions</span>  <span class="kn">import</span> <span class="o">*</span>
 
 <span class="kn">from</span> <span class="nn">.globals</span>       <span class="kn">import</span> <span class="n">core</span>
-<span class="kn">from</span> <span class="nn">.BaseContract</span>  <span class="kn">import</span> <span class="n">BaseContract</span>
+<span class="kn">from</span> <span class="nn">.BaseContract</span>  <span class="kn">import</span> <span class="n">BaseContract</span><span class="p">,</span> <span class="n">decode_contract_answer</span>
 
 <span class="n">__version__</span> <span class="o">=</span> <span class="n">version</span><span class="p">()</span>
 
@@ -172,11 +172,15 @@
 
 <span class="k">def</span> <span class="nf">check_exitcode</span><span class="p">(</span><span class="n">expected_ec</span><span class="p">,</span> <span class="n">real_ec</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">expected_ec</span> <span class="o">!=</span> <span class="n">real_ec</span><span class="p">:</span>
-        <span class="n">xtra</span> <span class="o">=</span> <span class="s1">''</span>
-        <span class="k">if</span> <span class="n">real_ec</span> <span class="o">==</span> <span class="mi">76</span><span class="p">:</span>
-            <span class="n">xtra</span> <span class="o">=</span> <span class="s1">': Contructor was not called'</span>
-        <span class="k">if</span> <span class="n">real_ec</span> <span class="o">==</span> <span class="mi">51</span><span class="p">:</span>
-            <span class="n">xtra</span> <span class="o">=</span> <span class="s1">': Constructor was already called'</span>
+        <span class="n">xtra</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">real_ec</span> <span class="o">==</span> <span class="mi">51</span><span class="p">:</span>   <span class="n">xtra</span> <span class="o">=</span> <span class="s1">'Calling of contract</span><span class="se">\'</span><span class="s1">s constructor that has already been called.'</span>
+        <span class="k">if</span> <span class="n">real_ec</span> <span class="o">==</span> <span class="mi">52</span><span class="p">:</span>   <span class="n">xtra</span> <span class="o">=</span> <span class="s1">'Replay protection exception.'</span>
+        <span class="k">if</span> <span class="n">real_ec</span> <span class="o">==</span> <span class="mi">60</span><span class="p">:</span>   <span class="n">xtra</span> <span class="o">=</span> <span class="s1">'Inbound message has wrong function id.'</span>
+        <span class="k">if</span> <span class="n">real_ec</span> <span class="o">==</span> <span class="mi">76</span><span class="p">:</span>   <span class="n">xtra</span> <span class="o">=</span> <span class="s1">'Public function was called before constructor.'</span>
+        <span class="c1"># TODO: add more codes here...</span>
+
+        <span class="k">if</span> <span class="n">xtra</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">xtra</span> <span class="o">=</span> <span class="s1">': '</span> <span class="o">+</span> <span class="n">xtra</span>
         <span class="n">verbose_</span><span class="p">(</span><span class="s1">'</span><span class="si">{}{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">get_last_error_msg</span><span class="p">(),</span> <span class="n">xtra</span><span class="p">))</span>
     <span class="k">assert</span> <span class="n">eq</span><span class="p">(</span><span class="n">expected_ec</span><span class="p">,</span> <span class="n">real_ec</span><span class="p">,</span> <span class="n">dismiss</span> <span class="o">=</span> <span class="ow">not</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_STOP_AT_CRASH</span><span class="p">)</span>
 

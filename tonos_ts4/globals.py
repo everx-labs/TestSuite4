@@ -2,7 +2,7 @@ import os
 import sys
 import importlib
 
-G_VERSION		= '0.4.0'
+G_VERSION		= '0.4.1'
 
 QUEUE           = []
 EVENTS          = []
@@ -20,10 +20,10 @@ G_VERBOSE           = False
 G_DUMP_MESSAGES     = False
 G_STOP_AT_CRASH     = True
 G_SHOW_EVENTS       = False
+G_SHOW_GETTERS      = False
 G_MSG_FILTER        = None
 G_WARN_ON_UNEXPECTED_ANSWERS = False
 G_STOP_ON_NO_ACCEPT = True
-G_DECODE_TUPLES     = True
 G_STOP_ON_NO_ACCOUNT = True
 G_STOP_ON_NO_FUNDS 	= True
 G_CHECK_ABI_TYPES	= True

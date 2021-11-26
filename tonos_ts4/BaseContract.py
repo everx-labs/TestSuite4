@@ -31,7 +31,7 @@ class BaseContract:
             If None, constructor is not called and can be called with
             separate `call_method()` call (onchain constructed)
         :param num wc: workchain_id to deploy contract to
-        :param dict initial_data: Initial data for the contract (static members).
+        :param dict initial_data: Initial data for the contract (static members)
         :param Address address: If this parameter is specified no new contract is created
             but instead a wrapper for an existing contract is created
         :param Address override_address: When specified this address will be used for deploying
@@ -57,18 +57,17 @@ class BaseContract:
         balance = either_or(balance, globals.G_DEFAULT_BALANCE)
 
         # Load ABI
-        with open(full_name + '.abi.json', 'rb') as fp:
-            self.abi_ = json.load(fp)
+        self.abi = Abi(name)
 
         if address is None:
             if globals.G_VERBOSE:
                 print(blue(f'Deploying {full_name} {p_n}'))
 
             if ctor_params is not None:
-                ctor_params = ts4.check_method_params(self.abi_, 'constructor', ctor_params)
+                ctor_params = ts4.check_method_params(self.abi, 'constructor', ctor_params)
 
             if initial_data is not None:
-                initial_data = ts4.check_method_params(self.abi_, '.data', initial_data)
+                initial_data = ts4.check_method_params(self.abi, '.data', initial_data)
 
             if pubkey is not None:
                 assert pubkey[0:2] == '0x'
@@ -96,17 +95,20 @@ class BaseContract:
         if nickname is not None:
             ts4.register_nickname(self.address, nickname)
 
+    @property
+    def abi_json(self):
+        return self.abi.json
+
     def _init2(self, name, address, nickname = None, just_deployed = False):
         Address.ensure_address(address)
         self.addr_ = address
-        name = os.path.join(globals.G_TESTS_PATH, name)
         if not just_deployed:
             if globals.G_VERBOSE:
                 print(blue('Creating wrapper for ' + name))
-            globals.core.set_contract_abi(self.address.str(), name + '.abi.json')
+            globals.core.set_contract_abi(self.address.str(), self.abi.path_)
 
         if globals.G_ABI_FIXER is not None:
-            ts4.fix_abi(self.name_, self.abi_, globals.G_ABI_FIXER)
+            ts4.fix_abi(self.name_, self.abi_json, globals.G_ABI_FIXER)
 
     @property
     def balance(self):
@@ -150,9 +152,9 @@ class BaseContract:
         :rtype: JSON
         """
 
-        params = ts4.check_method_params(self.abi_, method, params)
+        params = ts4.check_method_params(self.abi, method, params)
 
-        if globals.G_VERBOSE:
+        if globals.G_VERBOSE and globals.G_SHOW_GETTERS:
             print(green('  getter') + grey(':             ') + bright_cyan(format_addr(self.addr)), end='')
             print(cyan(grey('\n    method: ') + bright_cyan('{}'.format(method))))
 
@@ -188,8 +190,8 @@ class BaseContract:
         msg = Msg(json.loads(result.actions[0]))
         assert msg.is_answer(method)
 
-        if globals.G_VERBOSE:
-            print(f"{grey('    params: ')} {cyan(Params.stringify(msg.params))}\n")
+        if globals.G_VERBOSE and globals.G_SHOW_GETTERS:
+            print(f"{grey('    result: ')} {cyan(Params.stringify(msg.params))}\n")
 
         return msg.params
 
@@ -235,30 +237,9 @@ class BaseContract:
 
         decoder = either_or(decoder, ts4.decoder).fill_nones(ts4.decoder)
 
-        answer = self._decode_answer(values, method, key, decoder)
+        # print('values =', values)
+        answer = decode_contract_answer(self.abi, values, method, key, decoder)
         return make_params(answer) if decode else answer
-
-    def _decode_answer(self,
-        values,
-        method,
-        key,
-        params,
-    ):
-        keys = list(values.keys())
-
-        if key is None and len(keys) == 1:
-            key = keys[0]
-
-        if key is None:
-            return self._make_tuple_result(method, values, params)
-
-        assert key is not None
-        assert key in values, red("No '{}' in {}".format(key, values))
-
-        value     = values[key]
-        abi_type  = find_getter_output_type(self.abi_, method, key)
-
-        return ts4.decode_json_value(value, abi_type, params)
 
     def decode_event(self, event_msg):
         """Experimental feature. Decodes event parameters
@@ -271,7 +252,7 @@ class BaseContract:
 
         values      =   event_msg.data['params']
         event_name  =   event_msg.event
-        event_def   =   find_event_def(self.abi_, event_name)
+        event_def   =   self.abi.find_event_def(event_name)
 
         assert event_def is not None, red('Cannot find event: {}'.format(event_name))
 
@@ -281,23 +262,7 @@ class BaseContract:
 
     def _dump_event_type(self, msg):
         assert msg.is_event()
-        dump_struct(find_event_def(self.abi_, msg.event))
-
-    def _make_tuple_result(self, method, values, decoder):
-        types = find_getter_output_types(self.abi_, method)
-        res_dict = {}
-        res_arr  = []
-        for type in types:
-            value = ts4.decode_json_value(values[type.name], type, decoder)
-            res_dict[type.name] = value
-            res_arr.append(value)
-        decode_tuples = decoder.tuples
-        if decode_tuples is None:
-            decode_tuples = globals.G_DECODE_TUPLES         # TODO: not needed anymore. Remove!
-        if decode_tuples is True:
-            return tuple(res_arr)
-        else:
-            return res_dict
+        dump_struct(self.abi.find_event_def(msg.event))
 
     def call_method(self, method, params = dict(), private_key = None, expect_ec = 0, is_debot = False):
         """Calls a given method.
@@ -319,7 +284,7 @@ class BaseContract:
             print(cyan(grey('    method: ') + bright_cyan('{}'.format(method))
             + grey('\n    params: ') + cyan('{}'.format(Params.stringify(prettify_dict(params))))) + '\n')
 
-        params = ts4.check_method_params(self.abi_, method, params)
+        params = ts4.check_method_params(self.abi, method, params)
 
         try:
             result = globals.core.call_contract(
@@ -356,7 +321,7 @@ class BaseContract:
             if answer is not None:
                 assert answer.is_answer(method)
                 key = None
-                decoded_answer = self._decode_answer(answer.params, method, key, ts4.decoder)
+                decoded_answer = decode_contract_answer(self.abi, answer.params, method, key, ts4.decoder)
             if globals.G_AUTODISPATCH:
                 ts4.dispatch_messages()
             if answer is not None:
@@ -401,3 +366,41 @@ class BaseContract:
         :rtype: (str, str)
         """
         return (self.private_key_, self.public_key_)
+
+
+def _make_tuple_result(abi, method, values, decoder):
+    types = abi.find_getter_output_types(method)
+    res_dict = {}
+    res_arr  = []
+    for type in types:
+        value = ts4.decode_json_value(values[type.name], type, decoder)
+        res_dict[type.name] = value
+        res_arr.append(value)
+    if decoder.tuples is True:
+        return tuple(res_arr)
+    else:
+        return res_dict
+
+def decode_contract_answer(
+    abi,
+    values,
+    method,
+    key,
+    params,
+):
+    keys = list(values.keys())
+
+    if key is None and len(keys) == 1:
+        key = keys[0]
+
+    if key is None:
+        return _make_tuple_result(abi, method, values, params)
+
+    assert key is not None
+    assert key in values, red("No '{}' in {}".format(key, values))
+
+    value     = values[key]
+    abi_type  = abi.find_getter_output_type(method, key)
+
+    return ts4.decode_json_value(value, abi_type, params)
+

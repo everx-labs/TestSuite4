@@ -7,9 +7,44 @@ from .address import *
 
 from . import ts4
 
+
+class Abi:
+    def __init__(self, contract_name):
+        self.contract_name_ = contract_name
+        self.path_ = ts4.make_path(contract_name, '.abi.json')
+        with open(self.path_, 'rb') as fp:
+            self.json = json.load(fp)
+
+    def find_abi_method(self, method):
+        for rec in self.json['functions']:
+            if rec['name'] == method:
+                return rec
+        return None
+
+    def find_getter_output_types(self, method):
+        rec = self.find_abi_method(method)
+        assert rec is not None
+        return [AbiType(t) for t in rec['outputs']]
+
+    def find_getter_output_type(self, method, key):
+        types = self.find_getter_output_types(method)
+        for t in types:
+            if t.name == key:
+                return t
+        assert False
+
+    def find_event_def(self, event_name):
+        assert isinstance(event_name, str)
+        for event_def in self.json['events']:
+            if event_def['name'] == event_name:
+                return event_def
+        return None
+
+
 class AbiType:
     def __init__(self, type):
         assert isinstance(type, dict)
+        # print(type)
         self.raw_ = type
         self.name = type['name']
         self.type = type['type']
@@ -70,31 +105,6 @@ def _is_integer_type(type):
     assert isinstance(type, str)
     return re.match(r'^(u)?int\d+$', type)
 
-def find_abi_method(abi, method):
-    for rec in abi['functions']:
-        if rec['name'] == method:
-            return rec
-    return None
-
-def find_getter_output_types(abi, method):
-    rec = find_abi_method(abi, method)
-    assert rec is not None
-    return [AbiType(t) for t in rec['outputs']]
-
-def find_getter_output_type(abi, method, key):
-    types = find_getter_output_types(abi, method)
-    for t in types:
-        if t.name == key:
-            return t
-    assert False
-
-def find_event_def(abi, event_name):
-    assert isinstance(event_name, str)
-    for event_def in abi['events']:
-        if event_def['name'] == event_name:
-            return event_def
-    return None
-
 def decode_event_inputs(event_def, values):
     res = {}
     for type in event_def['inputs']:
@@ -109,11 +119,13 @@ def decode_event_inputs(event_def, values):
 
 
 def check_method_params(abi, method, params):
+    assert isinstance(abi, Abi)
+
     # ts4.verbose('check_method_params {}'.format(params))
     if method == '.data':
-        inputs = abi['data']
+        inputs = abi.json['data']
     else:
-        func = find_abi_method(abi, method)
+        func = abi.find_abi_method(method)
         if func is None:
             raise Exception("Unknown method name '{}'".format(method))
         inputs = func['inputs']
@@ -138,6 +150,14 @@ def _raise_type_mismatch(expected_type, value, abi_type):
         raise Exception(msg)
     else:
         ts4.verbose_(msg)
+
+def create_AbiType(type_str, abi_type):
+    assert isinstance(abi_type, AbiType)
+    val_type = dict(name = None, type = type_str)
+    if 'components' in abi_type.raw_:
+        val_type['components'] = abi_type.raw_['components']
+    val_type = AbiType(val_type)
+    return val_type
 
 def check_param_names_rec(value, abi_type):
     assert isinstance(abi_type, AbiType)
@@ -171,6 +191,13 @@ def check_param_names_rec(value, abi_type):
             _raise_type_mismatch('cell', value, abi_type)
         return value
 
+    if type == 'string':
+        if isinstance(value, str):
+            return value
+        if isinstance(value, Bytes):
+            return value.str()
+        _raise_type_mismatch('string', value, abi_type)
+
     if type == 'bytes':
         if isinstance(value, str):
             return Bytes(str2bytes(value))
@@ -190,21 +217,22 @@ def check_param_names_rec(value, abi_type):
 
     m = re.match(r'^map\((.*),(.*)\)$', type)
     if m:
-        key_type = m.group(1)
-        val_type = dict(name = None, type = m.group(2))
-        if 'components' in abi_type.raw_:
-            val_type['components'] = abi_type.raw_['components']
-        val_type = AbiType(val_type)
+        # key_type = m.group(1)
+        val_type = create_AbiType(m.group(2), abi_type)
         res = dict()
         for k in value.keys():
-            # if key_type == 'address':
-            #     key = Address(k)
-            # else:
-            #     key = decode_int(k)
             res[k] = check_param_names_rec(value[k], val_type)
         return res
 
+    m = re.match(r'^optional\((.*)\)$', type)
+    if m:
+        if value is None:
+            return None
+        val_type = create_AbiType(m.group(1), abi_type)
+        res = check_param_names_rec(value, val_type)
+        return res
+
     print(type, value)
-    ts4.verbose_("Unsupported type '{}'".format(type))
+    ts4.verbose_("Unsupported type to encode '{}'".format(type))
     return value
 

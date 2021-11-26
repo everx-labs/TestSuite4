@@ -25,7 +25,7 @@ from .dump      import *
 from .global_functions  import *
 
 from .globals       import core
-from .BaseContract  import BaseContract
+from .BaseContract  import BaseContract, decode_contract_answer
 
 __version__ = version()
 
@@ -34,11 +34,15 @@ decoder = Decoder.defaults()
 
 def check_exitcode(expected_ec, real_ec):
     if expected_ec != real_ec:
-        xtra = ''
-        if real_ec == 76:
-            xtra = ': Contructor was not called'
-        if real_ec == 51:
-            xtra = ': Constructor was already called'
+        xtra = None
+        if real_ec == 51:   xtra = 'Calling of contract\'s constructor that has already been called.'
+        if real_ec == 52:   xtra = 'Replay protection exception.'
+        if real_ec == 60:   xtra = 'Inbound message has wrong function id.'
+        if real_ec == 76:   xtra = 'Public function was called before constructor.'
+        # TODO: add more codes here...
+
+        if xtra is not None:
+            xtra = ': ' + xtra
         verbose_('{}{}'.format(globals.core.get_last_error_msg(), xtra))
     assert eq(expected_ec, real_ec, dismiss = not globals.G_STOP_AT_CRASH)
 

@@ -1,5 +1,6 @@
 import os
 import base64
+import hashlib
 
 from . import globals as g
 from .globals import GRAM, EMPTY_CELL
@@ -190,21 +191,88 @@ def format_addr(addr, compact = True):
             s = 'Addr({})'.format(s)
     return s
 
+def gen_addr(name, initial_data = None, keypair = None, wc = 0):
+    """Generates contract addresss.
+
+    :param str name: Name used to load contract's bytecode and ABI
+    :param dict initial_data: Initial data for the contract (static members)
+    :param keypair: Keypair containing private and public keys
+    :param num wc: workchain_id to deploy contract to
+    :return: Expected contract address
+    :rtype: Address
+    """
+    if keypair is not None:
+        # TODO: copy-paste below!
+        (private_key, pubkey) = keypair
+        if pubkey is not None:
+            assert pubkey[0:2] == '0x'
+            pubkey = pubkey.replace('0x', '')
+    else:
+        (private_key, pubkey) = (None, None)
+
+    abi = Abi(name)
+
+    if initial_data is not None:
+        initial_data = ts4.check_method_params(abi, '.data', initial_data)
+
+    result = ts4.core.gen_addr(
+            make_path(name, '.tvc'),
+            abi.path_,
+            ts4.json_dumps(initial_data) if initial_data is not None else None,
+            pubkey,
+            private_key,
+            wc
+        )
+    return Address(result)
+
 def make_keypair(seed = None):
     """Generates random keypair.
 
-    :param num seed: Seed to be used to generate keys. Useful when constant keypair is needed
+    :param str seed: Seed to be used to generate keys. Useful when constant keypair is needed
     :return: The key pair
     :rtype: (str, str)
     """
+    if isinstance(seed, str):
+        hash = hashlib.sha256(seed.encode('utf-8'))
+        seed = decode_int('0x' + hash.hexdigest())
+        seed = seed % (2**64)
     (secret_key, public_key) = globals.core.make_keypair(seed)
     public_key = '0x' + public_key
     return (secret_key, public_key)
 
+def save_keypair(keypair, filename):
+    """Saves keypair to file.
+
+    :param keypair: Keypair to be saved
+    :param str filename: File name
+    """
+    d = dict(
+        public = keypair[1].replace('0x', ''),
+        secret = keypair[0]
+    )
+    str = json.dumps(d, indent = 2)
+    f = open(filename, "w")
+    f.write(str)
+    f.close()
+
+def load_keypair(filename):
+    """Loads keypair from a file.
+
+    :param str filename: File name
+    :return: The loaded keypair
+    :rtype: (str, str)
+    """
+    with open(filename, 'rt') as f:
+        j = json.load(f)
+    public = j['public']
+    secret = j['secret']
+    return (secret, '0x' + public)
+
 def make_path(name, ext):
     fn = os.path.join(globals.G_TESTS_PATH, name)
-    if not fn.endswith(ext):
-        fn += ext
+    if not fn.endswith('.boc'):
+        if not fn.endswith(ext):
+            fn += ext
     return fn
 
 # TODO: Shouldn't this function return Cell?
@@ -222,7 +290,6 @@ def load_tvc(fn):
 
 def load_code_cell(fn):
     """Loads contract code cell from a compiled contract image with a given name.
-    Returns cell encoded to string.
 
     :param str fn: The file name
     :return: Cell object containing contract's code cell
@@ -233,7 +300,6 @@ def load_code_cell(fn):
 
 def load_data_cell(fn):
     """Loads contract data cell from a compiled contract image with a given name.
-    Returns cell encoded to string
 
     :param str fn: The file name
     :return: Cell object containing contract's data cell
@@ -339,10 +405,9 @@ def set_contract_abi(contract, new_abi_name):
     :param str new_abi_name: Name of the file containing the ABI
     """
     assert isinstance(contract, ts4.BaseContract)
-    fn = make_path(new_abi_name, '.abi.json')
-    globals.core.set_contract_abi(contract.addr.str(), fn)
-    with open(fn, 'rb') as fp:
-        contract.abi_ = json.load(fp)
+
+    contract.abi = Abi(new_abi_name)
+    globals.core.set_contract_abi(contract.addr.str(), contract.abi.path_)
 
 
 #########################################################################################################

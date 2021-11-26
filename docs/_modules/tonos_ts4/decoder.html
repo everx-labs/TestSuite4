@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.decoder - TestSuite4 v0.4.0</title>
+        <title>tonos_ts4.decoder - TestSuite4 v0.4.1</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.0</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.0</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -170,7 +170,7 @@
         
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">defaults</span><span class="p">():</span>
-        <span class="k">return</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">ints</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">strings</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Decoder</span><span class="p">(</span><span class="n">ints</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">strings</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">tuples</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
         
     <span class="k">def</span> <span class="nf">fill_nones</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Decoder</span><span class="p">(</span>
@@ -201,6 +201,9 @@
     <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">'cell'</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Cell</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
+    <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">'string'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">value</span>
+
     <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">'bytes'</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">bytes2str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">decoder</span><span class="o">.</span><span class="n">strings</span> <span class="k">else</span> <span class="n">Bytes</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
@@ -218,10 +221,7 @@
     <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">'^map\((.*),(.*)\)$'</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
         <span class="n">key_type</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">val_type</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">type</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
-        <span class="k">if</span> <span class="s1">'components'</span> <span class="ow">in</span> <span class="n">abi_type</span><span class="o">.</span><span class="n">raw_</span><span class="p">:</span>
-            <span class="n">val_type</span><span class="p">[</span><span class="s1">'components'</span><span class="p">]</span> <span class="o">=</span> <span class="n">abi_type</span><span class="o">.</span><span class="n">raw_</span><span class="p">[</span><span class="s1">'components'</span><span class="p">]</span>
-        <span class="n">val_type</span> <span class="o">=</span> <span class="n">AbiType</span><span class="p">(</span><span class="n">val_type</span><span class="p">)</span>
+        <span class="n">val_type</span> <span class="o">=</span> <span class="n">create_AbiType</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">abi_type</span><span class="p">)</span>
         <span class="n">res</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">key_type</span> <span class="o">==</span> <span class="s1">'address'</span><span class="p">:</span>
@@ -230,6 +230,15 @@
                 <span class="n">key</span> <span class="o">=</span> <span class="n">decode_int</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
             <span class="n">res</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">decode_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">val_type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span>
+
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">'^optional\((.*)\)$'</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">val_type</span> <span class="o">=</span> <span class="n">create_AbiType</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">abi_type</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">decode_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">val_type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
 
     <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
     <span class="n">ts4</span><span class="o">.</span><span class="n">verbose_</span><span class="p">(</span><span class="s2">"Unsupported type '</span><span class="si">{}</span><span class="s2">'"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">))</span>

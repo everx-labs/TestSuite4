@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.address - TestSuite4 v0.4.0</title>
+        <title>tonos_ts4.address - TestSuite4 v0.4.1</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.0</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.0</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -210,13 +210,15 @@
         <span class="k">return</span> <span class="bp">self</span></div>
 
 <div class="viewcode-block" id="Address.zero_addr"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Address.zero_addr">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">zero_addr</span><span class="p">(</span><span class="n">wc</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">zero_addr</span><span class="p">(</span><span class="n">wc</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
         <span class="sd">"""Creates a zero address instance in a given workchain.</span>
 
 <span class="sd">        :param num wc: Workchain ID</span>
 <span class="sd">        :return: Object</span>
 <span class="sd">        :rtype: Address</span>
 <span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">wc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">wc</span> <span class="o">=</span> <span class="mi">0</span>
+
         <span class="n">addr</span> <span class="o">=</span> <span class="s1">'</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="s1">'0'</span><span class="o">*</span><span class="mi">64</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Address</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span></div>
 
@@ -404,12 +406,20 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">'unknown'</span></div>
 
 <div class="viewcode-block" id="Msg.is_bounced"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Msg.is_bounced">[docs]</a>    <span class="k">def</span> <span class="nf">is_bounced</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">"""Checks if a current message is bounced.</span>
+        <span class="sd">"""Checks if the given message is bounced.</span>
 
 <span class="sd">        :return: Result of check</span>
 <span class="sd">        :rtype: bool</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">'bounced'</span></div>
+
+<div class="viewcode-block" id="Msg.is_getter"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Msg.is_getter">[docs]</a>    <span class="k">def</span> <span class="nf">is_getter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">"""Checks if the given message is a getter call.</span>
+
+<span class="sd">        :return: Result of check</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">'call_getter'</span></div>
 
 <div class="viewcode-block" id="Msg.dump_data"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.Msg.dump_data">[docs]</a>    <span class="k">def</span> <span class="nf">dump_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">"""Dumps message data.</span>

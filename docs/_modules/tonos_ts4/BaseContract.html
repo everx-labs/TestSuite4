@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.BaseContract - TestSuite4 v0.4.0</title>
+        <title>tonos_ts4.BaseContract - TestSuite4 v0.4.1</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.0</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.0</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -169,7 +169,7 @@
 <span class="sd">            If None, constructor is not called and can be called with</span>
 <span class="sd">            separate `call_method()` call (onchain constructed)</span>
 <span class="sd">        :param num wc: workchain_id to deploy contract to</span>
-<span class="sd">        :param dict initial_data: Initial data for the contract (static members).</span>
+<span class="sd">        :param dict initial_data: Initial data for the contract (static members)</span>
 <span class="sd">        :param Address address: If this parameter is specified no new contract is created</span>
 <span class="sd">            but instead a wrapper for an existing contract is created</span>
 <span class="sd">        :param Address override_address: When specified this address will be used for deploying</span>
@@ -195,18 +195,17 @@
         <span class="n">balance</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">balance</span><span class="p">,</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_DEFAULT_BALANCE</span><span class="p">)</span>
 
         <span class="c1"># Load ABI</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">full_name</span> <span class="o">+</span> <span class="s1">'.abi.json'</span><span class="p">,</span> <span class="s1">'rb'</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">abi_</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">abi</span> <span class="o">=</span> <span class="n">Abi</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">blue</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Deploying </span><span class="si">{</span><span class="n">full_name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">p_n</span><span class="si">}</span><span class="s1">'</span><span class="p">))</span>
 
             <span class="k">if</span> <span class="n">ctor_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">ctor_params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="s1">'constructor'</span><span class="p">,</span> <span class="n">ctor_params</span><span class="p">)</span>
+                <span class="n">ctor_params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="s1">'constructor'</span><span class="p">,</span> <span class="n">ctor_params</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">initial_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">initial_data</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="s1">'.data'</span><span class="p">,</span> <span class="n">initial_data</span><span class="p">)</span>
+                <span class="n">initial_data</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="s1">'.data'</span><span class="p">,</span> <span class="n">initial_data</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">pubkey</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="n">pubkey</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'0x'</span>
@@ -234,17 +233,20 @@
         <span class="k">if</span> <span class="n">nickname</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">ts4</span><span class="o">.</span><span class="n">register_nickname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">nickname</span><span class="p">)</span></div>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">abi_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="o">.</span><span class="n">json</span>
+
     <span class="k">def</span> <span class="nf">_init2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">nickname</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">just_deployed</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="n">Address</span><span class="o">.</span><span class="n">ensure_address</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addr_</span> <span class="o">=</span> <span class="n">address</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">globals</span><span class="o">.</span><span class="n">G_TESTS_PATH</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">just_deployed</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">blue</span><span class="p">(</span><span class="s1">'Creating wrapper for '</span> <span class="o">+</span> <span class="n">name</span><span class="p">))</span>
-            <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">set_contract_abi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">'.abi.json'</span><span class="p">)</span>
+            <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">set_contract_abi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="o">.</span><span class="n">path_</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_ABI_FIXER</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">ts4</span><span class="o">.</span><span class="n">fix_abi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_ABI_FIXER</span><span class="p">)</span>
+            <span class="n">ts4</span><span class="o">.</span><span class="n">fix_abi</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">abi_json</span><span class="p">,</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_ABI_FIXER</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">balance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -288,9 +290,9 @@
 <span class="sd">        :rtype: JSON</span>
 <span class="sd">        """</span>
 
-        <span class="n">params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span> <span class="ow">and</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_SHOW_GETTERS</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">green</span><span class="p">(</span><span class="s1">'  getter'</span><span class="p">)</span> <span class="o">+</span> <span class="n">grey</span><span class="p">(</span><span class="s1">':             '</span><span class="p">)</span> <span class="o">+</span> <span class="n">bright_cyan</span><span class="p">(</span><span class="n">format_addr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="p">)),</span> <span class="n">end</span><span class="o">=</span><span class="s1">''</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">cyan</span><span class="p">(</span><span class="n">grey</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">    method: '</span><span class="p">)</span> <span class="o">+</span> <span class="n">bright_cyan</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))))</span>
 
@@ -326,8 +328,8 @@
         <span class="n">msg</span> <span class="o">=</span> <span class="n">Msg</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">actions</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
         <span class="k">assert</span> <span class="n">msg</span><span class="o">.</span><span class="n">is_answer</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">grey</span><span class="p">(</span><span class="s1">'    params: '</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">cyan</span><span class="p">(</span><span class="n">Params</span><span class="o">.</span><span class="n">stringify</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">params</span><span class="p">))</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span> <span class="ow">and</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_SHOW_GETTERS</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">grey</span><span class="p">(</span><span class="s1">'    result: '</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">cyan</span><span class="p">(</span><span class="n">Params</span><span class="o">.</span><span class="n">stringify</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">params</span><span class="p">))</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">msg</span><span class="o">.</span><span class="n">params</span></div>
 
@@ -373,30 +375,9 @@
 
         <span class="n">decoder</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">decoder</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span><span class="o">.</span><span class="n">fill_nones</span><span class="p">(</span><span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span>
 
-        <span class="n">answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decode_answer</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
+        <span class="c1"># print('values =', values)</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="n">decode_contract_answer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">make_params</span><span class="p">(</span><span class="n">answer</span><span class="p">)</span> <span class="k">if</span> <span class="n">decode</span> <span class="k">else</span> <span class="n">answer</span></div>
-
-    <span class="k">def</span> <span class="nf">_decode_answer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-        <span class="n">values</span><span class="p">,</span>
-        <span class="n">method</span><span class="p">,</span>
-        <span class="n">key</span><span class="p">,</span>
-        <span class="n">params</span><span class="p">,</span>
-    <span class="p">):</span>
-        <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-
-        <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">key</span> <span class="o">=</span> <span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_tuple_result</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
-
-        <span class="k">assert</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-        <span class="k">assert</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">values</span><span class="p">,</span> <span class="n">red</span><span class="p">(</span><span class="s2">"No '</span><span class="si">{}</span><span class="s2">' in </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">values</span><span class="p">))</span>
-
-        <span class="n">value</span>     <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="n">abi_type</span>  <span class="o">=</span> <span class="n">find_getter_output_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">abi_type</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="BaseContract.decode_event"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.BaseContract.decode_event">[docs]</a>    <span class="k">def</span> <span class="nf">decode_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_msg</span><span class="p">):</span>
         <span class="sd">"""Experimental feature. Decodes event parameters</span>
@@ -409,7 +390,7 @@
 
         <span class="n">values</span>      <span class="o">=</span>   <span class="n">event_msg</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'params'</span><span class="p">]</span>
         <span class="n">event_name</span>  <span class="o">=</span>   <span class="n">event_msg</span><span class="o">.</span><span class="n">event</span>
-        <span class="n">event_def</span>   <span class="o">=</span>   <span class="n">find_event_def</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="n">event_name</span><span class="p">)</span>
+        <span class="n">event_def</span>   <span class="o">=</span>   <span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="o">.</span><span class="n">find_event_def</span><span class="p">(</span><span class="n">event_name</span><span class="p">)</span>
 
         <span class="k">assert</span> <span class="n">event_def</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="n">red</span><span class="p">(</span><span class="s1">'Cannot find event: </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">event_name</span><span class="p">))</span>
 
@@ -419,23 +400,7 @@
 
     <span class="k">def</span> <span class="nf">_dump_event_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
         <span class="k">assert</span> <span class="n">msg</span><span class="o">.</span><span class="n">is_event</span><span class="p">()</span>
-        <span class="n">dump_struct</span><span class="p">(</span><span class="n">find_event_def</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">))</span>
-
-    <span class="k">def</span> <span class="nf">_make_tuple_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">decoder</span><span class="p">):</span>
-        <span class="n">types</span> <span class="o">=</span> <span class="n">find_getter_output_types</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
-        <span class="n">res_dict</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">res_arr</span>  <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="nb">type</span> <span class="ow">in</span> <span class="n">types</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="nb">type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
-            <span class="n">res_dict</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-            <span class="n">res_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="n">decode_tuples</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">tuples</span>
-        <span class="k">if</span> <span class="n">decode_tuples</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">decode_tuples</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_DECODE_TUPLES</span>         <span class="c1"># TODO: not needed anymore. Remove!</span>
-        <span class="k">if</span> <span class="n">decode_tuples</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">res_arr</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">res_dict</span>
+        <span class="n">dump_struct</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="o">.</span><span class="n">find_event_def</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">))</span>
 
 <div class="viewcode-block" id="BaseContract.call_method"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.BaseContract.call_method">[docs]</a>    <span class="k">def</span> <span class="nf">call_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> <span class="n">private_key</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">expect_ec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">is_debot</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="sd">"""Calls a given method.</span>
@@ -457,7 +422,7 @@
             <span class="nb">print</span><span class="p">(</span><span class="n">cyan</span><span class="p">(</span><span class="n">grey</span><span class="p">(</span><span class="s1">'    method: '</span><span class="p">)</span> <span class="o">+</span> <span class="n">bright_cyan</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span>
             <span class="o">+</span> <span class="n">grey</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">    params: '</span><span class="p">)</span> <span class="o">+</span> <span class="n">cyan</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Params</span><span class="o">.</span><span class="n">stringify</span><span class="p">(</span><span class="n">prettify_dict</span><span class="p">(</span><span class="n">params</span><span class="p">)))))</span> <span class="o">+</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">)</span>
 
-        <span class="n">params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi_</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">call_contract</span><span class="p">(</span>
@@ -494,7 +459,7 @@
             <span class="k">if</span> <span class="n">answer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="n">answer</span><span class="o">.</span><span class="n">is_answer</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="kc">None</span>
-                <span class="n">decoded_answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decode_answer</span><span class="p">(</span><span class="n">answer</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span>
+                <span class="n">decoded_answer</span> <span class="o">=</span> <span class="n">decode_contract_answer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">answer</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_AUTODISPATCH</span><span class="p">:</span>
                 <span class="n">ts4</span><span class="o">.</span><span class="n">dispatch_messages</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">answer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -539,6 +504,44 @@
 <span class="sd">        :rtype: (str, str)</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">private_key_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">public_key_</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_make_tuple_result</span><span class="p">(</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">decoder</span><span class="p">):</span>
+    <span class="n">types</span> <span class="o">=</span> <span class="n">abi</span><span class="o">.</span><span class="n">find_getter_output_types</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+    <span class="n">res_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">res_arr</span>  <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="nb">type</span> <span class="ow">in</span> <span class="n">types</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="nb">type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
+        <span class="n">res_dict</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="n">res_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">decoder</span><span class="o">.</span><span class="n">tuples</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">res_arr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">res_dict</span>
+
+<span class="k">def</span> <span class="nf">decode_contract_answer</span><span class="p">(</span>
+    <span class="n">abi</span><span class="p">,</span>
+    <span class="n">values</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">,</span>
+    <span class="n">key</span><span class="p">,</span>
+    <span class="n">params</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_make_tuple_result</span><span class="p">(</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">assert</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">values</span><span class="p">,</span> <span class="n">red</span><span class="p">(</span><span class="s2">"No '</span><span class="si">{}</span><span class="s2">' in </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">values</span><span class="p">))</span>
+
+    <span class="n">value</span>     <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="n">abi_type</span>  <span class="o">=</span> <span class="n">abi</span><span class="o">.</span><span class="n">find_getter_output_type</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">abi_type</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
 </pre></div>
       </article>
       <footer>
