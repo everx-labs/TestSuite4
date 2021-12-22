@@ -109,6 +109,12 @@ def eq(v1, v2, dismiss = False, msg = None, xtra = ''):
         print(msg + red('exp: {}, got: {}.'.format(v1, v2)) + xtra)
         return True if dismiss else False
 
+def leq(v1, v2):
+    if v1 <= v2:
+        return True
+    print(red('expected {} <= {}'.format(v1, v2)))
+    return False
+
 def either_or(value, default):
     return value if value is not None else default
 

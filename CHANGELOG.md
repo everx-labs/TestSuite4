@@ -1,3 +1,38 @@
+## 20-12-2021: TestSuite4 0.5.0 alpha-0
+
+### NEW
+
+- implemented accounting for gas fees
+- added support for gas limits
+- added support for RawReserve mode 2
+- added `ts4.build_int_msg(src, dst, method, params, value)`
+- added `ts4.set_balance()` and `ts4.last_gas()`
+- added `ts4.set_trace_level()` and `ts4.set_trace_tvm()`
+
+### CHANGES / IMPROVEMENTS
+
+- `peek_msg()` and `peek_event()` return `None` now on empty queue
+- `dispatch_messages()`: added `limit` parameter and return value
+- added support for multiple exit codes in `dispatch_one_message()` and ``dispatch_messages()``
+
+### FIXES
+
+- fixed an issue with extera empty line when printing `logstr()`
+- fixed crash for `ts4.grams(None)`
+
+### EXPERIMENTAL
+
+- added experimental `BaseContract.generate_getters()`:
+    Use `c.g.test(1,2,3)` instead of `c.call_getter('test', dict(x=1, y=2, z=3))`
+
+### OTHER
+
+- added `ts4.BaseException()`
+- added `ts4.leq()` comparator
+- printing messages: fixed coloring for src/dst, formatted value
+- shortened printed Cells
+- core: added GlobalConfig, `get_global_config()` and `set_global_config()`
+
 ## 09-11-2021: TestSuite4 0.4.1
 
 ### NEW

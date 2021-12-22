@@ -10,6 +10,16 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
+use num_format::{Locale, ToFormattedString};
+
+use serde::{
+    Serialize, Deserialize
+};
+
+use pyo3::prelude::*;
+
+use ton_client::crypto::KeyPair;
+
 use ton_block::{
     MsgAddressInt, StateInit,
 };
@@ -20,7 +30,7 @@ use ton_types::{
 };
 
 use crate::util::{
-    get_now,
+    get_now, get_now_ms,
 };
 
 use crate::call_contract::{
@@ -41,17 +51,34 @@ use crate::debug_info::{
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+#[pyclass]
+#[derive(Default, Clone, Serialize, Deserialize)]
+pub struct GlobalConfig {
+    #[pyo3(get, set)]
+                        pub trace_level: u64,
+    #[pyo3(get, set)]
+                        pub trace_tvm: bool,
+    #[pyo3(get, set)]
+                        pub gas_fee: bool,
+    // pub trace_on: bool,
+    // pub config_params: HashMap<u32, Cell>,
+    // pub debot_keypair: Option<KeyPair>,
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
 #[derive(Default)]
 pub struct GlobalState {
+    pub config: GlobalConfig,
     contracts: HashMap<MsgAddressInt, ContractInfo>,
     pub dummy_balances: HashMap<MsgAddressInt, u64>,
     pub all_abis: AllAbis,
     pub messages: MessageStorage,
-    pub trace: bool,
     pub trace_on: bool,
     pub last_trace: Option<Vec<TraceStepInfo>>,
     pub last_error_msg: Option<String>,
     pub config_params: HashMap<u32, Cell>,
+    pub debot_keypair: Option<KeyPair>,
     now: Option<u64>,
     now2: u64,
     pub lt: u64,
@@ -108,11 +135,19 @@ impl ContractInfo {
     pub fn set_balance(&mut self, balance: u64) {
         self.balance = balance;
     }
-    pub fn change_balance(&mut self, sign: i64, diff: u64) {
+    pub fn change_balance(&mut self, sign: i64, diff: u64, trace_level: u64) {
+        if trace_level >= 10 {
+            println!("!!!!! change_balance: {} {}", sign, diff.to_formatted_string(&Locale::en));
+            println!("!!!!!   before : {}", self.balance.to_formatted_string(&Locale::en));
+        }
         self.balance = if sign < 0 {
+            assert!(diff <= self.balance);
             self.balance - diff
         } else {
             self.balance + diff
+        };
+        if trace_level >= 10 {
+            println!("!!!!!   after  : {}", self.balance.to_formatted_string(&Locale::en));
         }
     }
     pub fn state_init(&self) -> &StateInit {
@@ -124,6 +159,10 @@ impl ContractInfo {
 }
 
 impl GlobalState {
+
+    pub fn is_trace(&self, level: u64) -> bool {
+        level <= self.config.trace_level
+    }
 
     pub fn set_contract(&mut self, address: MsgAddressInt, info: ContractInfo) {
         assert!(address == *info.address());
@@ -154,15 +193,19 @@ impl GlobalState {
         self.now.unwrap_or(get_now())
     }
 
-    pub fn make_time_header(&mut self) -> Option<String> {
+    pub fn get_now_ms(&mut self) -> u64 {
         if self.now.is_none() {
             // Add sleep to avoid Replay Protection Error issue
             std::thread::sleep(std::time::Duration::from_millis(1));
         }
         self.now.map(|v| {
             self.now2 += 1;
-            format!("{{\"time\": {}}}", v*1000 + self.now2)
-        })
+            v*1000 + self.now2
+        }).unwrap_or(get_now_ms())
+    }
+    
+    pub fn make_time_header(&mut self) -> Option<String> {
+        Some(format!("{{\"time\": {}}}", self.get_now_ms()))
     }
 
     pub fn set_now(&mut self, now: u64) {

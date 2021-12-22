@@ -3,7 +3,7 @@ import base64
 import hashlib
 
 from . import globals as g
-from .globals import GRAM, EMPTY_CELL
+from .globals import EVER, GRAM, EMPTY_CELL
 from .util import *
 from .address import *
 from .abi import *
@@ -105,8 +105,7 @@ def peek_msg():
     :return: Object
     :rtype: Msg
     """
-    assert len(g.QUEUE) > 0
-    return g.QUEUE[0]
+    return g.QUEUE[0] if len(g.QUEUE) > 0 else None
 
 def pop_event():
     """Removes first event from the unprocessed events g.QUEUE and returns it.
@@ -123,8 +122,7 @@ def peek_event():
     :return: Object
     :rtype: Msg
     """
-    assert len(g.EVENTS) > 0
-    return g.EVENTS[0]
+    return g.EVENTS[0] if len(g.EVENTS) > 0 else None
 
 def queue_length():
     """Returns the size of the unprocessed messages g.QUEUE.
@@ -189,6 +187,19 @@ def format_addr(addr, compact = True):
     else:
         if not compact:
             s = 'Addr({})'.format(s)
+    return s
+
+def format_addr_colored(addr, color1, color2):
+    Address.ensure_address(addr)
+    if addr.is_none():
+        return colorize(color1, 'addr_none')
+    addr = addr.str()
+    s = addr[:10]
+    if addr in globals.NICKNAMES:
+        s = colorize(color1, globals.NICKNAMES[addr]) + colorize(color2, ' ({})'.format(s))
+        # s = "{} ({})".format(globals.NICKNAMES[addr], s)
+    else:
+        s = colorize(color1, '{}'.format(s))
     return s
 
 def gen_addr(name, initial_data = None, keypair = None, wc = 0):
@@ -308,8 +319,13 @@ def load_data_cell(fn):
     fn = make_path(fn, '.tvc')
     return Cell(globals.core.load_data_cell(fn))
 
+def evers(n):
+    if n is None: return None
+    return '{:.3f}'.format(n / EVER).replace('.000', '')
+
+# deprecated
 def grams(n):
-    return '{:.3f}'.format(n / GRAM).replace('.000', '')
+    return evers(n)
 
 def ensure_balance(expected, got, dismiss = False, epsilon = 0, msg = None):
     """Checks the contract balance for exact match.
@@ -327,7 +343,7 @@ def ensure_balance(expected, got, dismiss = False, epsilon = 0, msg = None):
     diff = got - int(expected)
     if abs(diff) <= epsilon:
         return
-    xtra = ", diff = {}g ({})".format(grams(diff), diff)
+    xtra = ", diff = {}g ({})".format(evers(diff), diff)
     assert eq(int(expected), got, xtra = xtra, dismiss = dismiss, msg = msg)
 
 def register_abi(contract_name):
@@ -371,6 +387,24 @@ def encode_message_body(abi_name, method, params):
         ts4.json_dumps(params)
     )
     return Cell(encoded)
+
+# TODO: finalize and add docs
+def build_int_msg(src, dst, abi_file, method, params, value):
+    assert isinstance(src, Address)
+    assert isinstance(dst, Address)
+
+    msg_body = ts4.encode_message_body(abi_file, method, params)
+
+    # src = zero_addr(-1)
+    msg = ts4.core.build_int_msg(src.str(), dst.str(), msg_body.raw_, value)
+    # verbose_(msg)
+    msg = Msg(json.loads(msg))
+    verbose_(msg)
+    ts4.globals.QUEUE.append(msg)
+    return msg
+
+def last_gas():
+    return ts4.globals.G_LAST_GAS_USED
 
 def set_config_param(index, value):
     """Sets global config parameter.

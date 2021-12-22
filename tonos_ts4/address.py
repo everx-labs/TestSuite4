@@ -4,6 +4,7 @@ from . import globals
 from . import ts4
 from .util import *
 
+
 class Address:
     """The :class:`Address <Address>` object, which contains an
     Address entity.
@@ -135,7 +136,13 @@ class Cell():
         return self.__repr__()
 
     def __repr__(self):
-        return "Cell('{}')".format(self.raw_)
+        return "Cell('{}')".format(self.short_raw())
+
+    def short_raw(self):
+        t = self.raw_;
+        if (len(t) > 16):
+            t = t[:13] + '...'
+        return t
 
     def __eq__(self, other):
         if isinstance(other, Cell):
@@ -347,11 +354,12 @@ def make_params(data):
 
 class ExecutionResult:
     def __init__(self, result):
-        (ec, actions, gas, err) = result
+        (ec, actions, gas, err, debot_answer_msg) = result
         self.exit_code  = ec
         self.actions    = actions
         self.gas_used   = gas
         self.error      = err
+        self.debot_answer_msg = debot_answer_msg
 
 def prettify_dict(d, max_str_len = 67):
     nd = {}

@@ -7,6 +7,29 @@ from .address import *
 from .abi     import *
 from .global_functions import *
 
+def build_getter_wrapper(contract, method, inputs):
+    def func(*args):
+        if len(args) != len(inputs):
+            raise ts4.BaseException('Wrong parameters count: expected {}, got {}'.format(len(inputs), len(args)))
+        d = dict()
+        for i in range(len(args)):
+            t = AbiType(inputs[i])
+            d[t.name] = args[i]
+        return contract.call_getter(method, d)
+    return func
+
+class Getters:
+    def __init__(self, contract):
+        assert isinstance(contract, BaseContract)
+        abi = contract.abi
+        for rec in abi.json['functions']:
+            method = rec['name']
+            output_types = abi.find_getter_output_types(method)
+            if output_types == []:
+                continue
+            setattr(self, method, build_getter_wrapper(contract, method, rec['inputs']))
+
+
 class BaseContract:
     """The :class:`BaseContract <BaseContract>` object, which is responsible
     for deploying contracts and interaction with deployed contracts.
@@ -63,11 +86,18 @@ class BaseContract:
             if globals.G_VERBOSE:
                 print(blue(f'Deploying {full_name} {p_n}'))
 
-            if ctor_params is not None:
-                ctor_params = ts4.check_method_params(self.abi, 'constructor', ctor_params)
+            error_msg = None
 
-            if initial_data is not None:
-                initial_data = ts4.check_method_params(self.abi, '.data', initial_data)
+            try:
+                if ctor_params is not None:
+                    ctor_params = ts4.check_method_params(self.abi, 'constructor', ctor_params)
+
+                if initial_data is not None:
+                    initial_data = ts4.check_method_params(self.abi, '.data', initial_data)
+            except Exception as err:
+                error_msg = str(err)
+            if error_msg is not None:
+                raise ts4.BaseException(error_msg)
 
             if pubkey is not None:
                 assert pubkey[0:2] == '0x'
@@ -84,11 +114,13 @@ class BaseContract:
                     override_address,
                     balance,
                 )
-            except:
-                err_msg = globals.core.get_last_error_msg()
-                if err_msg is not None:
-                    ts4.verbose_(err_msg)
-                raise
+            except Exception as err:
+                tvm_err_msg = globals.core.get_last_error_msg()
+                if tvm_err_msg is not None:
+                    ts4.verbose_(tvm_err_msg)
+                error_msg = str(err)
+            if error_msg is not None:
+                raise ts4.BaseException(error_msg)
             address = Address(address)
             just_deployed = True
         self._init2(name, address, just_deployed = just_deployed)
@@ -175,7 +207,7 @@ class BaseContract:
         assert eq(None, result.error)
         # print(actions)
 
-        ts4.check_exitcode(expect_ec, result.exit_code)
+        ts4.check_exitcode([expect_ec], result.exit_code)
 
         if expect_ec != 0:
             return
@@ -184,7 +216,7 @@ class BaseContract:
 
         for msg in actions:
             if not msg.is_answer():
-                raise Exception("Unexpected message type '{}' in getter output".format(msg.type))
+                raise ts4.BaseException("Unexpected message type '{}' in getter output".format(msg.type))
 
         assert eq(1, len(result.actions)), 'len(actions) == 1'
         msg = Msg(json.loads(result.actions[0]))
@@ -217,7 +249,13 @@ class BaseContract:
         :return: A returned value in decoded form (exact type depends on the type of getter)
         :rtype: type
         """
-        values = self.call_getter_raw(method, params, expect_ec)
+        error_msg = None
+        try:
+            values = self.call_getter_raw(method, params, expect_ec)
+        except Exception as err:
+            error_msg = str(err)
+        if error_msg is not None:
+            raise ts4.BaseException(error_msg)
 
         if expect_ec > 0:
             # TODO: ensure values is empty?
@@ -277,14 +315,23 @@ class BaseContract:
         """
         # TODO: check param types. In particular, that `private_key` looks correct.
         #       Or introduce special type for keys...
+
         assert isinstance(params, dict)
+        if isinstance(expect_ec, int):
+            expect_ec = [expect_ec]
         if globals.G_VERBOSE:
             print(blue('> ext_in_msg') + grey(': '), end='')
             print(cyan('    '), grey('->'), bright_cyan(format_addr(self.addr)))
             print(cyan(grey('    method: ') + bright_cyan('{}'.format(method))
             + grey('\n    params: ') + cyan('{}'.format(Params.stringify(prettify_dict(params))))) + '\n')
 
-        params = ts4.check_method_params(self.abi, method, params)
+        error_msg = None
+        try:
+            params = ts4.check_method_params(self.abi, method, params)
+        except Exception as err:
+            error_msg = str(err)
+        if error_msg is not None:
+            raise ts4.BaseException(error_msg)
 
         try:
             result = globals.core.call_contract(
@@ -301,23 +348,34 @@ class BaseContract:
                 print("Exception when calling '{}' with params {}".format(method, ts4.json_dumps(params)))
             raise
 
+        globals.G_LAST_GAS_USED = result.gas_used
+
         if result.error == 'no_accept':
             severity = 'ERROR' if globals.G_STOP_ON_NO_ACCEPT else 'WARNING'
             err_msg = '{}! No ACCEPT in the contract method `{}`'.format(severity, method)
-            assert not globals.G_STOP_ON_NO_ACCEPT, red(err_msg)
+            if globals.G_STOP_ON_NO_ACCEPT:
+                raise ts4.BaseException(red(err_msg))
             verbose_(err_msg)
         elif result.error == 'no_account':
             severity = 'ERROR' if globals.G_STOP_ON_NO_ACCOUNT else 'WARNING'
             err_msg = '{}! Account doesn\'t exist: `{}`'.format(severity, self.addr.str())
-            assert not globals.G_STOP_ON_NO_ACCOUNT, err_msg
+            if globals.G_STOP_ON_NO_ACCOUNT:
+                raise ts4.BaseException(red(err_msg))
             verbose_(err_msg)
         elif result.error == 'no_funds':
             severity = 'ERROR' if globals.G_STOP_ON_NO_FUNDS else 'WARNING'
             err_msg = '{}! Not enough funds on: `{}`'.format(severity, self.addr.str())
-            assert not globals.G_STOP_ON_NO_FUNDS, err_msg
+            if globals.G_STOP_ON_NO_FUNDS:
+                raise ts4.BaseException(red(err_msg))
             verbose_(err_msg)
         else:
-            _gas, answer = ts4.process_actions(result, expect_ec)
+            error_msg = None
+            try:
+                _gas, answer = ts4.process_actions(result, expect_ec)
+            except Exception as err:
+                error_msg = str(err)
+            if error_msg is not None:
+                raise ts4.BaseException(error_msg)
             if answer is not None:
                 assert answer.is_answer(method)
                 key = None
@@ -366,6 +424,11 @@ class BaseContract:
         :rtype: (str, str)
         """
         return (self.private_key_, self.public_key_)
+
+    # TODO: add docs
+    def generate_getters(self):
+        self.g = Getters(self)
+        # assert False
 
 
 def _make_tuple_result(abi, method, values, decoder):

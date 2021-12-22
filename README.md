@@ -1,8 +1,8 @@
-# TestSuite4 0.4.1
+# TestSuite4 0.5.0a
 
 [![Chat on Telegram](https://img.shields.io/badge/chat-on%20telegram-9cf.svg)](https://t.me/ton_ts4)
 
-TestSuite4 is a framework designed to simplify development and testing of TON Contracts. It contains lightweight
+TestSuite4 is a framework designed to simplify development and testing of Everscale (formerly known as Free TON) Contracts. It contains lightweight
 blockchain emulator making it easy to develop contracts in a TDD-friendly style.
 
 ## Features:
@@ -32,7 +32,7 @@ See `tutorials` for self-documented examples of framework usage or visit [TestSu
 
 :warning: *You might need to replace `python` and `pip` with `python3` and `pip3` if you are running Linux or macOS.*
 
-If you have `Python 3.6-3.9`, `pip` and `git` installed on your system, you can proceed with the following steps.
+If you have `Python 3.6-3.10`, `pip` and `git` installed on your system, you can proceed with the following steps.
 
 1. Install `tonos-ts4` package:
 ```bash
@@ -56,7 +56,7 @@ For more information, visit [TestSuite4's documentation](https://tonlabs.github.
 
 ### Prerequesites
 
-- Python 3.6-3.9
+- Python 3.6-3.10
 - Latest version of Rust
 - Cargo tool
 

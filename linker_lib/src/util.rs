@@ -10,6 +10,8 @@
 use num::{BigInt};
 use crate::num::ToPrimitive;
 
+use num_format::{Locale, ToFormattedString};
+
 use std::io::Cursor;
 use std::time::SystemTime;
 use std::str::FromStr;
@@ -45,7 +47,11 @@ fn get_src_addr_mut<'a>(msg: &'a mut Message) -> Option<&'a mut MsgAddressIntOrN
 }
 
 pub fn substitute_address(mut msg: Message, address: &MsgAddressInt) -> Message {
-    let src = get_src_addr_mut(&mut msg).unwrap();
+    let src = get_src_addr_mut(&mut msg);
+    if src.is_none() {  // possible for debots
+        return msg;
+    }
+    let src = src.unwrap();
     if *src == MsgAddressIntOrNone::None {
         *src = MsgAddressIntOrNone::Some(address.clone());
     }
@@ -59,7 +65,7 @@ pub fn convert_address(address: UInt256, wc: i8) -> MsgAddressInt {
 pub fn load_from_file(contract_file: &str) -> StateInit {
     let content = std::fs::read(contract_file)
         .map_err(|e| format!("Cannot load {}: {}", contract_file, e))
-        .unwrap();      // TODO!: return error
+        .unwrap();      // TODO: return error
     let mut csor = Cursor::new(content);
     let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
     StateInit::construct_from(&mut cell.into()).unwrap()
@@ -104,7 +110,14 @@ pub fn get_now() -> u64 {
     SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as u64
 }
 
+pub fn get_now_ms() -> u64 {
+    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis() as u64
+}
+
 pub fn decode_address(address: &String) -> MsgAddressInt {
     MsgAddressInt::from_str(&address).unwrap()
 }
 
+pub fn format3(value: u64) -> String {
+    value.to_formatted_string(&Locale::en)
+}

@@ -29,6 +29,10 @@ use crate::util::{
     create_external_inbound_msg, create_internal_msg,
 };
 
+use crate::debots::{
+    DebotCallInfo,
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, Debug)]
@@ -72,6 +76,7 @@ impl Serialize for AddressWrapper {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MsgType {
+    MsgUndefined,
     MsgUnknown,
     MsgEmpty,
     MsgCall,
@@ -86,6 +91,7 @@ pub enum MsgType {
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct MsgInfoJson {
     id:         Option<u32>,
+    pub parent_id:  Option<u32>,
     msg_type:   MsgType,
     src:        Option<AddressWrapper>,
     dst:        Option<AddressWrapper>,
@@ -96,34 +102,43 @@ pub struct MsgInfoJson {
     bounce:     Option<bool>,
     bounced:    Option<bool>,
     log_str:    Option<String>,
+    pub debot_info: Option<MsgInfoJsonDebot>,
+}
+
+// for sending to Python
+#[derive(Clone, Debug, Serialize)]
+pub struct MsgInfoJsonDebot {
+    pub debot_addr:  AddressWrapper,
 }
 
 // from ABI
 #[derive(Default, Debug)]
 pub struct MsgAbiInfo {
     t: MsgType,
-    params: Option<JsonValue>,
-    is_getter: Option<bool>,
+    params:     Option<JsonValue>,
+    is_getter:  Option<bool>,
     name:       Option<String>,
-    value: Option<u64>,
-    timestamp: Option<u64>,
+    value:      Option<u64>,
+    timestamp:  Option<u64>,
+    is_debot:   bool,
 }
 
-// for storing
+// for storing in all messages
 #[derive(Clone, Debug)]
 pub struct MsgInfo {
     ton_msg:        Option<TonBlockMessage>,
-    json:           MsgInfoJson,
+    pub json:           MsgInfoJson,
+    pub debot_call_info:    Option<DebotCallInfo>,
 }
 
-// for call_context_ex()
+// for call_contract_ex()
 #[derive(Default)]
-pub struct MessageInfo2 {       // TODO!!: rename?
-    id:             Option<u32>,
-    ton_msg:        Option<TonBlockMessage>,
-    dst:            Option<MsgAddressInt>,
-    value:          Option<u64>,
-    pub ticktock:   Option<i8>,
+pub struct CallContractMsgInfo {        // TODO: move
+    id:                     Option<u32>,
+    ton_msg:                Option<TonBlockMessage>,
+    dst:                    Option<MsgAddressInt>,
+    value:                  Option<u64>,
+    pub ticktock:           Option<i8>,
     is_getter_call:         bool,
     is_offchain_ctor_call:  bool,
     is_debot_call:          bool,
@@ -138,13 +153,14 @@ pub struct MessageStorage {
 
 impl Default for MsgType {
     fn default() -> Self {
-        MsgType::MsgUnknown
+        MsgType::MsgUndefined
     }
 }
 
 impl MsgType {
     fn to_string(&self) -> &str {
         match self {
+            Self::MsgUndefined  => "undefined",
             Self::MsgUnknown    => "unknown",
             Self::MsgEmpty      => "empty",
             Self::MsgCall       => "call",
@@ -173,7 +189,7 @@ impl MsgInfoJson {
         let (src, dst) = fetch_src_dst(&ton_msg);
 
         // TODO: move
-        // TODO!!: get_int_header()
+        // TODO: get_int_header()
         let (bounce, bounced) = match ton_msg.header() {
             CommonMsgInfo::IntMsgInfo(header) =>
                  (Some(header.bounce), Some(header.bounced)),
@@ -182,6 +198,7 @@ impl MsgInfoJson {
 
         MsgInfoJson {
             id:         None,
+            parent_id:  None,
             msg_type:   msg.msg_type(),
             src:        src.clone(),
             dst:        dst.clone(),
@@ -192,6 +209,7 @@ impl MsgInfoJson {
             bounce:     bounce,
             bounced:    bounced,
             log_str:    None,
+            debot_info: None,
         }
     }
 
@@ -210,7 +228,7 @@ impl MsgInfoJson {
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-impl MessageInfo2 {
+impl CallContractMsgInfo {      // TODO: move to call_contract.rs
 
     pub fn id(&self) -> Option<u32> {
         self.id.clone()
@@ -219,6 +237,10 @@ impl MessageInfo2 {
     pub fn ton_msg(&self) -> Option<&TonBlockMessage> {
         self.ton_msg.as_ref()
     }
+
+    // pub fn set_ton_msg(&mut self, ton_msg: TonBlockMessage) {
+        // self.ton_msg = Some(ton_msg);
+    // }
 
     pub fn value(&self) -> Option<u64> {
         self.value.clone()
@@ -244,21 +266,19 @@ impl MessageInfo2 {
         self.is_ext_msg() && !self.is_getter_call && !self.is_offchain_ctor_call && !self.is_debot_call
     }
 
-    pub fn with_info(msg: &MsgInfo) -> MessageInfo2 {
-        let mut info = Self::with_ton_msg(msg.ton_msg().unwrap().clone());     // TODO!: ton_msg to Arc
-        info.id    = Some(msg.id());
-        info.value = Some(msg.value());
-        info
+    pub fn is_offchain_ctor_call(&self) -> bool {
+        self.is_offchain_ctor_call
     }
 
-    pub fn with_ticktock(is_tock: bool, address: MsgAddressInt) -> MessageInfo2 {
-        let mut msg_info = Self::default();
-        msg_info.ticktock = Some(if is_tock { -1 } else { 0 });
-        msg_info.dst = Some(address);
-        msg_info
+    pub fn is_getter_call(&self) -> bool {
+        self.is_getter_call
     }
 
-    fn with_ton_msg(msg: TonBlockMessage) -> MessageInfo2 {
+    pub fn is_debot_call(&self) -> bool {
+        self.is_debot_call
+    }
+
+    fn with_ton_msg(msg: TonBlockMessage) -> CallContractMsgInfo {
         let dst = msg.dst().clone().unwrap();
         let mut msg_info = Self::default();
         msg_info.dst     = Some(dst);
@@ -266,13 +286,28 @@ impl MessageInfo2 {
         msg_info
     }
 
-    pub fn with_offchain_ctor(msg: TonBlockMessage) -> MessageInfo2 {
+    pub fn with_info(msg: &MsgInfo) -> CallContractMsgInfo {
+        let mut info = Self::with_ton_msg(msg.ton_msg().unwrap().clone());     // TODO: ton_msg to Arc
+        info.id    = Some(msg.id());
+        info.value = msg.value();
+        info.is_debot_call = msg.debot_call_info.is_some();
+        info
+    }
+
+    pub fn with_ticktock(is_tock: bool, address: MsgAddressInt) -> CallContractMsgInfo {
+        let mut msg_info = Self::default();
+        msg_info.ticktock = Some(if is_tock { -1 } else { 0 });
+        msg_info.dst = Some(address);
+        msg_info
+    }
+
+    pub fn with_offchain_ctor(msg: TonBlockMessage) -> CallContractMsgInfo {
         let mut msg_info = Self::with_ton_msg(msg);
         msg_info.is_offchain_ctor_call = true;
         msg_info
     }
 
-    pub fn with_getter(msg: TonBlockMessage, is_getter: bool, is_debot: bool) -> MessageInfo2 {
+    pub fn with_getter(msg: TonBlockMessage, is_getter: bool, is_debot: bool) -> CallContractMsgInfo {
         let mut msg_info = Self::with_ton_msg(msg);
         msg_info.is_getter_call = is_getter;
         msg_info.is_debot_call  = is_debot;
@@ -345,6 +380,10 @@ impl MsgAbiInfo {
     pub fn fix_timestamp(&mut self, timestamp: u64) {
         self.timestamp = Some(timestamp);
     }
+    
+    pub fn set_debot_mode(&mut self) {
+        self.is_debot = true;
+    }
 
 }
 
@@ -354,27 +393,39 @@ impl MsgInfo {
 
     pub fn create(ton_msg: TonBlockMessage, msg: MsgAbiInfo) -> MsgInfo {
         let msg_json = MsgInfoJson::with_decoded_info(&ton_msg, msg);
-        MsgInfo { ton_msg: Some(ton_msg), json: msg_json }
+        MsgInfo { ton_msg: Some(ton_msg), json: msg_json, debot_call_info: None }
     }
 
     pub fn with_log_str(text: String, timestamp: u64) -> MsgInfo {
         let msg_json = MsgInfoJson::with_log_str(text, timestamp);
-        MsgInfo { ton_msg: None, json: msg_json }
+        MsgInfo { ton_msg: None, json: msg_json, debot_call_info: None }
     }
 
     pub fn id(&self) -> u32 {
         self.json.id.unwrap()
     }
 
+    pub fn parent_id(&self) -> Option<u32> {
+        self.json.parent_id
+    }
+
     pub fn ton_msg(&self) -> Option<&TonBlockMessage> {
         self.ton_msg.as_ref()
     }
 
-    pub fn src(&self) -> MsgAddressInt {        // TODO!: use AddressWrapper
+    pub fn set_ton_msg(&mut self, ton_msg: TonBlockMessage) {
+        self.ton_msg = Some(ton_msg);
+    }
+
+    pub fn src(&self) -> MsgAddressInt {        // TODO: use AddressWrapper
         self.json.src.as_ref().unwrap().to_int().unwrap()
     }
 
-    pub fn dst(&self) -> MsgAddressInt {        // TODO!: use AddressWrapper
+    pub fn has_src(&self) -> bool {
+        return !self.json.src.as_ref().is_none();
+    }
+
+    pub fn dst(&self) -> MsgAddressInt {        // TODO: use AddressWrapper
         self.json.dst.as_ref().unwrap().to_int().unwrap()
     }
 
@@ -395,8 +446,13 @@ impl MsgInfo {
         self.json.id = Some(id);
     }
 
-    pub fn value(&self) -> u64 {
-        self.json.value.unwrap()
+    pub fn set_parent_id(&mut self, parent_id: u32) {
+        assert!(self.json.parent_id.is_none());
+        self.json.parent_id = Some(parent_id);
+    }
+
+    pub fn value(&self) -> Option<u64> {
+        self.json.value
     }
 
 }
@@ -456,6 +512,12 @@ impl MessageStorage {
     pub fn to_json(&self) -> JsonValue {
         self.messages.iter().map(|msg| msg.json().clone()).collect()
     }
+    pub fn set_debot_call_info(&mut self, id: u32, debot_call_info: DebotCallInfo) {
+        let mut msg_info = (*self.get(id)).clone();
+        msg_info.debot_call_info = Some(debot_call_info);
+        let msg_info = Arc::new(msg_info);
+        self.messages[id as usize] = msg_info;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -463,7 +525,7 @@ impl MessageStorage {
 pub fn create_bounced_msg(msg: &MsgInfo, now: u64) -> TonBlockMessage {
 
     let ton_msg     = msg.ton_msg().unwrap().clone();
-    let msg_value   = msg.value();
+    let msg_value   = msg.value().unwrap();
     let bounce      = msg.bounce();
 
     assert!(bounce);

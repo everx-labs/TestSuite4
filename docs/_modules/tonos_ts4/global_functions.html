@@ -243,8 +243,7 @@
 <span class="sd">    :return: Object</span>
 <span class="sd">    :rtype: Msg</span>
 <span class="sd">    """</span>
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">QUEUE</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
-    <span class="k">return</span> <span class="n">g</span><span class="o">.</span><span class="n">QUEUE</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="n">g</span><span class="o">.</span><span class="n">QUEUE</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">QUEUE</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 <div class="viewcode-block" id="pop_event"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.pop_event">[docs]</a><span class="k">def</span> <span class="nf">pop_event</span><span class="p">():</span>
     <span class="sd">"""Removes first event from the unprocessed events g.QUEUE and returns it.</span>
@@ -261,8 +260,7 @@
 <span class="sd">    :return: Object</span>
 <span class="sd">    :rtype: Msg</span>
 <span class="sd">    """</span>
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">EVENTS</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
-    <span class="k">return</span> <span class="n">g</span><span class="o">.</span><span class="n">EVENTS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="n">g</span><span class="o">.</span><span class="n">EVENTS</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">EVENTS</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 <div class="viewcode-block" id="queue_length"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.queue_length">[docs]</a><span class="k">def</span> <span class="nf">queue_length</span><span class="p">():</span>
     <span class="sd">"""Returns the size of the unprocessed messages g.QUEUE.</span>

@@ -8,7 +8,7 @@ Run a first test for Free TON smart-contracts and debots using TestSuite4.
 .. warning::
     You might need to replace *python* and *pip* with *python3* and *pip3* if you are running Linux or macOS.
 
-If you have *Python 3.6-3.9*, *pip* and *git* installed on your system, you can proceed with the following steps.
+If you have *Python 3.6-3.10*, *pip* and *git* installed on your system, you can proceed with the following steps.
 
 - Install *tonos-ts4* package:
 

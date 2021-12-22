@@ -7,6 +7,8 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
+use std::cmp::min;
+
 use ton_types::{
     Cell,
 };
@@ -22,11 +24,12 @@ use crate::global_state::{
 };
 
 use crate::messages::{
-    MsgInfo, 
+    MsgInfo, MsgInfoJsonDebot,
+    AddressWrapper,
 };
 
 use crate::util::{
-    bigint_to_u64, get_msg_value, substitute_address,
+    bigint_to_u64, get_msg_value, substitute_address, format3,
 };
 
 use crate::call_contract::{
@@ -43,67 +46,29 @@ use crate::exec::{
 
 #[derive(Default)]
 struct ActionsProcessor {
-    balance: u64,
-    code: Option<Cell>,
-    reserved_balance: u64,
-    destroy: bool,
-    msg_value: u64,
-    verbose: bool,
-}
+    verbose:            bool,
+    msg_value:          u64,
+    gas_fee:            Option<u64>,
+    balance:            u64,
+    original_balance:   u64,
 
-pub fn process_actions(
-    gs: &mut GlobalState,
-    mut contract_info: ContractInfo,
-    result: &ExecutionResult,
-    method: Option<String>,
-    msg_value: Option<u64>,
-) -> Result<Vec<MsgInfo>, String> {
-
-    // let mut msg_value = msg_value.unwrap_or_default();
-
-    let address: &MsgAddressInt = contract_info.address();
-
-    let abi_info = contract_info.abi_info();
-    // let mut balance = contract_info.balance();
-
-    let mut msgs = vec![];
-    let mut state = ActionsProcessor::default();
-    state.verbose = gs.trace;
-    state.balance = contract_info.balance();
-    state.msg_value = msg_value.unwrap_or_default();
-
-    let info_ex = &result.info_ex;
-
-    for act in &info_ex.out_actions {
-        if let Some(msg_info) = process_action(
-                 gs, act, &address, &mut state, &method,
-                &abi_info, 
-        )? {
-            msgs.push(msg_info);
-        }
-    }
-
-    let address = address.clone();
-    
-    if state.destroy {
-        gs.remove_contract(&address);
-    } else {
-    
-        let mut state_init = info_ex.state_init.clone();
-        if let Some(c) = state.code {
-            state_init.set_code(c);
-        }
-
-        contract_info.set_balance(state.balance);
-        contract_info.set_state_init(state_init);
-        gs.set_contract(address, contract_info);
-    }
-
-    Ok(msgs)
+    code:               Option<Cell>,
+    reserved_balance:   u64,
+    destroy:            bool,
 }
 
 impl ActionsProcessor {
     
+    fn create(gs: &GlobalState, orig_balance: u64, balance: u64, msg_value: u64, gas_fee: Option<u64>) -> ActionsProcessor {
+        let mut st = ActionsProcessor::default();
+        st.verbose   = gs.is_trace(3);
+        st.balance   = balance;
+        st.original_balance = orig_balance;
+        st.msg_value = msg_value;
+        st.gas_fee   = gas_fee;
+        st
+    }
+
     fn decrease_balance(&mut self, value: u64) -> Result<(), String> {
         let error_str = "\n!!!!!!!!!!!! Message makes balance negative !!!!!!!!!!!!!\nBalance:   ".to_string();
         // TODO!: refactor, handle error
@@ -127,8 +92,9 @@ impl ActionsProcessor {
         let mut additional_value = 0;
         if mode == 64 {
             // send money back
-            self.decrease_balance(self.msg_value)?;
-            additional_value = self.msg_value;
+            let fee = self.gas_fee.unwrap_or_default();
+            self.decrease_balance(self.msg_value - fee)?;
+            additional_value = self.msg_value - fee;
             self.msg_value = 0;
         }
 
@@ -145,6 +111,84 @@ impl ActionsProcessor {
         }
         Ok(additional_value)
     }
+
+    fn reserve(&mut self, mode: u8, value: u64) {
+
+        if self.verbose {
+            println!("Action(ReserveCurrency) - mode = {}, value = {}", mode, format3(value));
+        }
+        if mode == 0 {
+            self.reserved_balance = value;
+        } else if mode == 2 {
+            self.reserved_balance = min(value, self.balance);
+        } else if mode == 4 {
+            // println!("orig_balance: {} vs {}", format3(orig_balance), format3(self.original_balance));
+            self.reserved_balance = self.original_balance + value;
+        } else {
+            println!("OutAction::ReserveCurrency - Unsupported mode {}", mode);
+        }
+        if self.verbose {
+            println!("reserving balance {}", format3(self.reserved_balance));
+        }
+    }
+}
+
+pub fn process_actions(
+    gs: &mut GlobalState,
+    mut contract_info: ContractInfo,
+    result: &ExecutionResult,
+    method: Option<String>,
+    msg_value: Option<u64>,
+    is_debot_call: bool,
+    gas_fee: Option<u64>,
+) -> Result<Vec<MsgInfo>, String> {
+
+    let address: &MsgAddressInt = contract_info.address();
+
+    let abi_info = contract_info.abi_info();
+
+    let orig_balance = gs.get_contract(&address).unwrap().balance();
+
+
+    let mut state = ActionsProcessor::create(
+        &gs, orig_balance, contract_info.balance(), msg_value.unwrap_or_default(), gas_fee);
+
+    let info_ex = &result.info_ex;
+    let parent_msg_id = result.info.inbound_msg_id;
+
+    let mut msgs = vec![];
+
+    for act in &info_ex.out_actions {
+        if let Some(mut msg_info) = process_action(
+                 gs, act, &address, &mut state, &method,
+                &abi_info, is_debot_call,
+        )? {
+            if parent_msg_id.is_some() {
+                msg_info.set_parent_id(parent_msg_id.unwrap());
+            }
+            msgs.push(msg_info);
+        }
+    }
+
+    let address = address.clone();
+    
+    if state.destroy {
+        gs.remove_contract(&address);
+    } else {
+
+        let mut state_init = info_ex.state_init.clone();
+
+        if let Some(c) = state.code {
+            state_init.set_code(c);
+        }
+        contract_info.set_state_init(state_init);
+
+        contract_info.set_balance(state.balance);
+        gs.set_contract(address, contract_info);
+
+    }
+
+    Ok(msgs)
 }
 
 fn process_action(
@@ -154,47 +198,42 @@ fn process_action(
     state: &mut ActionsProcessor,
     method: &Option<String>,
     abi_info: &AbiInfo,
+    is_debot_call: bool,
 ) -> Result<Option<MsgInfo>, String> {
-    // TODO!: refactor this function! Too many parameters
     // TODO: remove .clone()
     match action.clone() {
         OutAction::SendMsg{ mode, out_msg } => {
-            if gs.trace {
+            if gs.is_trace(3) {
                 println!("Action(SendMsg):");
             }
 
             let additional_value = state.process_send_msg(mode, &out_msg)?;
+            // println!("{:?}", out_msg);
             let out_msg = substitute_address(out_msg, &address);
 
+            let is_debot_call2 = out_msg.src().is_none();
+
             // TODO: is this code needed here? Should it be moved?
-            let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value);
-            let msg_info2 = MsgInfo::create(out_msg, j);
+            let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value, is_debot_call);
+            let mut msg_info2 = MsgInfo::create(out_msg, j);
+            
+            if is_debot_call2 {
+                msg_info2.json.debot_info = Some(MsgInfoJsonDebot{debot_addr: AddressWrapper::with_int(address.clone())});
+            }
+
+            // println!("!!!!! msg_info2.json.debot_info = {:?}", msg_info2.json.debot_info);
 
             return Ok(Some(msg_info2));
         },
         OutAction::SetCode { new_code } => {
-            if gs.trace {
+            if gs.is_trace(3) {
                 println!("Action(SetCode)");
             }
             state.code = Some(new_code);
         },
         OutAction::ReserveCurrency { mode, value } => {
-            if gs.trace {
-                println!("Action(ReserveCurrency)");
-            }
-            // TODO: support other modes when needed. Add more tests. Refactor balance logic
-            if mode == 0 {
-                // TODO: support other currencies
-                state.reserved_balance = value.grams.0 as u64;
-                if gs.trace {
-                    println!("reserving balance {}", state.reserved_balance);
-                }
-            } else if mode == 4 {
-                let orig_balance = gs.get_contract(&address).unwrap().balance();
-                state.reserved_balance = orig_balance + bigint_to_u64(&value.grams.value());
-            } else {
-                println!("OutAction::ReserveCurrency - Unsupported mode {}", mode);
-            }
+            let value = bigint_to_u64(&value.grams.value());
+            state.reserve(mode, value);
         },
         OutAction::ChangeLibrary { .. } => {
             println!("Action(ChangeLibrary)");

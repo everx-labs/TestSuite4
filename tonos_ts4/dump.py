@@ -87,11 +87,25 @@ def dump_message(msg: Msg):
         ttt = "> " + green('{}'.format(msg.data))
         #print("> " + green(ttt))
 
+    if msg.value is None:
+        msg_value_is_correct = True
+        msg_value = 'None'
+    else:
+        msg_value_is_correct = msg.value < 2**63
+        msg_value = '{:,}'.format(msg.value)
+    msg_value = cyan(msg_value) if msg_value_is_correct else red(msg_value)
+
     print(blue('> int_msg' + msg_type) + grey(': '), end='')
-    print(bright_cyan(format_addr(msg.src)), grey('->'), bright_cyan(format_addr(msg.dst)), end='')
-    print(grey(', value:'), cyan(msg.value))
+
+    src = format_addr_colored(msg.src, BColors.BRIGHT_CYAN, BColors.RESET)
+    dst = format_addr_colored(msg.dst, BColors.BRIGHT_CYAN, BColors.RESET)
+
+    print(src, grey('->'), dst, end='')
+    print(grey(', value:'), msg_value)
     if ttt != '':
         print(ttt)
+
+    assert msg_value_is_correct
 
 
 #########################################################################################################

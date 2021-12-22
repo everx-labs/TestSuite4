@@ -23,6 +23,6 @@ contract Tutorial10Encoder {
     function call_it(address dest, TvmCell payload) public pure {
         tvm.accept();
         // Call destination contract with a previously encoded message
-        dest.transfer({value: 1 ton, body: payload});
+        dest.transfer({value: 1 ever, body: payload});
     }
 }

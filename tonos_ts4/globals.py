@@ -1,18 +1,16 @@
-import os
-import sys
-import importlib
 
-G_VERSION		= '0.4.1'
+G_VERSION		= '0.5.0a0'
 
 QUEUE           = []
 EVENTS          = []
 ALL_MESSAGES    = []
 NICKNAMES       = dict()
 
-GRAM            = 1_000_000_000
+GRAM            = 1_000_000_000  # deprecated
+EVER            = 1_000_000_000
 EMPTY_CELL      = 'te6ccgEBAQEAAgAAAA=='
 
-G_DEFAULT_BALANCE   = 100*GRAM
+G_DEFAULT_BALANCE   = 100*EVER
 
 G_TESTS_PATH    = 'contracts/'
 
@@ -29,19 +27,13 @@ G_STOP_ON_NO_FUNDS 	= True
 G_CHECK_ABI_TYPES	= True
 G_AUTODISPATCH      = False
 
+G_LAST_GAS_USED     = 0
+
 G_ABI_FIXER     = None
 
 
-PACKAGE_DIR = os.path.basename(os.path.dirname(__file__))
-CORE = '.' + sys.platform + '.linker_lib'
+core = None
 
-try:
-    core = importlib.import_module(CORE, PACKAGE_DIR)
-except ImportError as err:
-    print('Error: {}'.format(err))
-    exit()
-except:
-    print('Unsupported platform:', sys.platform)
-    exit()
-
-
+def set_core(x):
+    global core
+    core = x

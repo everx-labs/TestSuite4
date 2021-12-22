@@ -7,9 +7,9 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use ed25519_dalek::{
-    Keypair,
-};
+use std::convert::TryInto;
+
+use ed25519_dalek::Keypair;
 
 use ton_block::{
     Message as TonBlockMessage,
@@ -44,13 +44,17 @@ use crate::call_contract::{
 
 use crate::messages::{
     MsgAbiInfo,
-    MsgInfo, MessageInfo2,
+    MsgInfo, CallContractMsgInfo,
     create_bounced_msg, create_inbound_msg,
 };
 
 use crate::abi::{
     decode_body,
     build_abi_body, set_public_key, AbiInfo,
+};
+
+use crate::debots::{
+    prepare_ext_in_message, debot_build_on_success, debot_build_on_error,
 };
 
 use crate::debug_info::{
@@ -65,11 +69,12 @@ pub struct ExecutionResult2 {
     gas: i64,
     info: Option<String>,
     pub trace: Option<Vec<TraceStepInfo>>,
+    debot_answer_msg: Option<String>,
 }
 
 impl ExecutionResult2 {
-    pub fn unpack(self) -> (i32, Vec<String>, i64, Option<String>) {
-        (self.exit_code, self.out_actions, self.gas, self.info)
+    pub fn unpack(self) -> (i32, Vec<String>, i64, Option<String>, Option<String>) {
+        (self.exit_code, self.out_actions, self.gas, self.info, self.debot_answer_msg)
     }
     fn with_actions(result: ExecutionResult, out_actions: Vec<String>) -> ExecutionResult2 {
         ExecutionResult2 {
@@ -79,6 +84,7 @@ impl ExecutionResult2 {
             info:        result.info_msg,
             trace:       result.trace,
             out_actions: out_actions,
+            debot_answer_msg: None,
         }
     }
     fn with_aborted(reason: String) -> ExecutionResult2 {
@@ -110,7 +116,7 @@ pub fn deploy_contract_impl(
     let address = address.unwrap_or(address0);
     // println!("address = {:?}", address);
 
-    if gs.trace {
+    if gs.is_trace(1) {
         println!("deploy_contract_impl: {:?} {}", contract_name, address);
     }
 
@@ -137,7 +143,9 @@ pub fn apply_constructor(
     abi_info: &AbiInfo,
     ctor_params : &str,
     private_key: Option<String>,
-    trace: bool,
+    trace_level: u64,
+    debug: bool,
+    trace1: bool,
     trace2: bool,
     time_header: Option<String>,
     now: u64,
@@ -166,14 +174,15 @@ pub fn apply_constructor(
         0,  // balance
     );
 
-    let msg_info = MessageInfo2::with_offchain_ctor(
+    let msg_info = CallContractMsgInfo::with_offchain_ctor(
         create_inbound_msg(addr.clone(), &body, now)
     );
 
     let result = call_contract_ex(
         &contract_info,
         &msg_info,
-        trace, trace2,
+        trace_level,
+        debug, trace1, trace2,
         None,
         now,
         lt,
@@ -210,7 +219,7 @@ fn bounce_msg(
     if msg.bounce() && contract.is_some() {
         msgs.push(create_bounced_msg2(&gs, &msg, &contract.unwrap().abi_info()));
     } else {
-        increase_dummy_balance(gs, msg.dst(), msg.value());
+        increase_dummy_balance(gs, msg.dst(), msg.value().unwrap());
     }
     let mut result = ExecutionResult2::default();
     result.out_actions = gs.add_messages(msgs);
@@ -220,17 +229,39 @@ fn bounce_msg(
 fn dispatch_message_on_error(
     gs: &mut GlobalState,
     msg: &MsgInfo,
-    mut result: ExecutionResult2
+    mut result: ExecutionResult2,
+    gas_fee: u64,
 ) -> ExecutionResult2 {
+
+    if gs.is_trace(5) {
+        println!("dispatch_message_on_error: msg.value = {:?}, gas_fee = {}", msg.value(), gas_fee);
+    }
 
     let dst = msg.dst();
 
     let mut contract = gs.get_contract(&dst).unwrap();
-    let abi_info = contract.abi_info().clone();     // TODO!!: Arc?
-    contract.change_balance(-1, msg.value());
+    let abi_info = contract.abi_info().clone();     // TODO: Arc?
+    if msg.value().is_none() {
+        // the dispatched message comes from Debot, but it should be handled before
+        println!("!!!!! dispatch_message_on_error: msg.value().is_none()");
+        return result;
+    }
+
+    let msg_value = msg.value().unwrap();
+
+    if msg_value <= gas_fee {
+        // no money to send error message, do nothing
+        if gs.is_trace(1) {
+            println!("dispatch_message_on_error: no money for reply on error");
+        }
+        return result;        
+    }
+
+    contract.change_balance(-1, msg_value - gas_fee, gs.config.trace_level);
     gs.set_contract(dst, contract);
 
     if msg.bounce() {
+        // TODO: account gas fee here
         let msg = create_bounced_msg2(&gs, &msg, &abi_info);
         result.out_actions = gs.add_messages(vec![msg]);
     }
@@ -240,52 +271,137 @@ fn dispatch_message_on_error(
 
 pub fn dispatch_message_impl(
     gs: &mut GlobalState,
-    msg_id: u32,        // TODO!: pass MsgInfo instead?
+    msg_id: u32,        // TODO: pass MsgInfo instead?
 ) -> ExecutionResult2 {
 
-    let msg_info = &*gs.messages.get(msg_id);
-    let ton_msg = &msg_info.ton_msg().unwrap();
+    let mut msg_info: MsgInfo = (*gs.messages.get(msg_id)).clone();
+
+    let ton_msg = msg_info.ton_msg().unwrap().clone();
+
+    if gs.is_trace(1) {
+        println!("dispatch_message_impl: msg_id = {}", msg_id);
+    }
+    if gs.is_trace(5) {
+        println!("ton_msg = {:?}", ton_msg);
+    }
+
+    let mut is_debot_call = false;
+    let mut debot_call_info = None;
+
+    if ton_msg.ext_in_header().is_some() {      // TODO: move this to process_actions?
+        /*
+        println!("=================");
+        println!("src2 = {}", msg_info.src2());
+        println!("{:?}", ton_msg);
+        */
+        let (new_msg, info) = 
+            prepare_ext_in_message(ton_msg.clone(), gs.get_now_ms(), gs.debot_keypair.clone()).unwrap();
+        msg_info.set_ton_msg(new_msg);
+        is_debot_call = true;
+        let mut info = info;
+        if msg_info.has_src() {
+            info.debot_addr = Some(msg_info.src());
+        } else {
+            info.debot_addr = Some(msg_info.json.debot_info.as_ref().unwrap().debot_addr.to_int().unwrap());
+        }
+        debot_call_info = Some(info);
+        
+        msg_info.debot_call_info = debot_call_info.clone();
+        gs.messages.set_debot_call_info(msg_id, debot_call_info.clone().unwrap());
+    }
 
     let address = msg_info.dst();
 
     if let Some(state_init) = ton_msg.state_init() {
         if gs.address_exists(&address) {
-            return bounce_msg(gs, msg_info);
+            return bounce_msg(gs, &msg_info);
         }
         let wc = address.workchain_id() as i8;
         deploy_contract_impl(gs, None, state_init.clone(), None, AbiInfo::default(), wc, 0).unwrap();
     }
 
     if !gs.address_exists(&address) {
-        return bounce_msg(gs, msg_info);
+        return bounce_msg(gs, &msg_info);
     }
 
-    let result = exec_contract_and_process_actions(
+    let mut result = exec_contract_and_process_actions(
         gs,
-        &MessageInfo2::with_info(&msg_info),
+        &CallContractMsgInfo::with_info(&msg_info),
         None, // method
+        is_debot_call,
     );
+    
+    if is_debot_call {
+        println!("!!!!!!!!!!!! debot_call_info = {:?}", debot_call_info);
+    }
+
+    // println!("!!!!!! debot_call_info = {:?}", msg_info.debot_call_info.is_some());
 
     if !is_success_exit_code(result.exit_code) {
-        dispatch_message_on_error(gs, msg_info, result)
+        if is_debot_call {
+            println!("!!!!!!!!!!!! on_error = {:?}", result.exit_code);
+            let info = debot_call_info.unwrap();
+            let src = decode_address(&info.dst_addr);
+            let dst = info.debot_addr.as_ref().unwrap();
+
+            let msg = debot_build_on_error(src, dst.clone(), info.onerror_id, result.exit_code as u32);
+
+            let debot_abi = gs.get_contract(&dst).unwrap().abi_info().clone();
+
+            let j = decode_message(&gs, &debot_abi, None, &msg, 0, false);
+            let mut msg_info2 = MsgInfo::create(msg.clone(), j);
+
+            msg_info2.debot_call_info = Some(info);
+
+            let msg_info2 = gs.messages.add(msg_info2);
+            result.debot_answer_msg = Some(msg_info2.json_str());
+
+            result
+        } else {
+            let gas_fee = if gs.config.gas_fee { result.gas*1000 } else { 0 };
+            dispatch_message_on_error(gs, &msg_info, result, gas_fee.try_into().unwrap())
+        }
     } else {
+        let out_actions = &result.out_actions;
+        if is_debot_call && out_actions.len() == 0 {
+            let info = debot_call_info.unwrap();
+            let answer_id = info.answer_id;
+            let src = decode_address(&info.dst_addr);
+            let dst = info.debot_addr.clone().unwrap();
+
+            let msg = debot_build_on_success(src, dst.clone(), answer_id);
+
+            let debot_abi = gs.get_contract(&dst).unwrap().abi_info().clone();
+
+            let j = decode_message(&gs, &debot_abi, None, &msg, 0, false);
+            let mut msg_info2 = MsgInfo::create(msg.clone(), j);
+
+            msg_info2.debot_call_info = Some(info);
+
+            let msg_info2 = gs.messages.add(msg_info2);
+            result.debot_answer_msg = Some(msg_info2.json_str());
+        }
         result
     }
 }
 
 fn create_bounced_msg2(gs: &GlobalState, msg_info: &MsgInfo, abi_info: &AbiInfo) -> MsgInfo {
     let msg2 = create_bounced_msg(&msg_info, gs.get_now());
-    let j = decode_message(&gs, &abi_info, None, &msg2, 0);
+    let j = decode_message(&gs, &abi_info, None, &msg2, 0, false);
     MsgInfo::create(msg2.clone(), j)
 }
 
 pub fn exec_contract_and_process_actions(
     gs: &mut GlobalState,
-    msg_info: &MessageInfo2,
+    msg_info: &CallContractMsgInfo,
     method: Option<String>,
+    is_debot_call: bool,
 ) -> ExecutionResult2 {
 
     // TODO: Too long function
+    if gs.is_trace(5) {
+        println!("exec_contract_and_process_actions: method={:?}", method);
+    }
 
     gs.lt = gs.lt + 1;
 
@@ -293,13 +409,14 @@ pub fn exec_contract_and_process_actions(
     let mut contract_info = gs.get_contract(&address).unwrap();
 
     if let Some(msg_value) = msg_info.value() {
-        contract_info.change_balance(1, msg_value);
+        contract_info.change_balance(1, msg_value, gs.config.trace_level);
     }
 
     let mut result = call_contract_ex(
         &contract_info,
         &msg_info,
-        gs.trace, gs.trace_on,
+        gs.config.trace_level,
+        gs.is_trace(5), gs.config.trace_tvm, gs.trace_on,
         make_config_params(&gs),
         gs.get_now(),
         gs.lt,
@@ -314,12 +431,25 @@ pub fn exec_contract_and_process_actions(
         return ExecutionResult2::with_actions(result, vec![])
     }
 
+    let gas_fee = if gs.config.gas_fee && !msg_info.is_getter_call() {
+        if gs.is_trace(5) {
+            println!("exec_contract_and_process_actions: charge for gas - {}", result.info.gas);
+        }
+        let fee = 1000*result.info.gas as u64;
+        contract_info.change_balance(-1, fee, gs.config.trace_level);
+        Some(fee)
+    } else {
+        None
+    };
+
     let msgs = process_actions(
         gs,
         contract_info,
         &result,
         method,
         msg_info.value(),
+        is_debot_call,
+        gas_fee,
     );
 
     if let Err(reason) = msgs {
@@ -375,8 +505,8 @@ pub fn call_contract_impl(
 
     let contract_info = contract_info.unwrap();
 
-    if gs.trace {
-        println!("encode_function_call(\"{}\",\"{}\")", method, params);
+    if gs.is_trace(1) {
+        println!("call_contract_impl: \"{}\" - \"{}\"", method, params);
         // println!("private_key {:?}", private_key);
     }
 
@@ -402,15 +532,15 @@ pub fn call_contract_impl(
     let msg = create_inbound_msg(addr.clone(), &body, gs.get_now());
 
     // TODO: move to function
-    let mut msg_abi = decode_message(&gs, &abi_info, Some(method.clone()), &msg, 0);
+    let mut msg_abi = decode_message(&gs, &abi_info, Some(method.clone()), &msg, 0, false);
     msg_abi.fix_call(is_getter);
     let msg_info = MsgInfo::create(msg.clone(), msg_abi);
     gs.messages.add(msg_info);
 
-    let msg_info = MessageInfo2::with_getter(msg, is_getter, is_debot);
+    let msg_info = CallContractMsgInfo::with_getter(msg, is_getter, is_debot);
 
     let result = exec_contract_and_process_actions(
-        gs, &msg_info, Some(method.clone()),
+        gs, &msg_info, Some(method.clone()), false,
     );
 
     Ok(result)
@@ -425,7 +555,6 @@ pub fn load_state_init(
     initial_data: &Option<String>,
     pubkey: &Option<String>,
     private_key: &Option<String>,
-    trace: bool,
 ) -> Result<StateInit, String> {
     let mut state_init = load_from_file(&contract_file);
     if let Some(pubkey) = pubkey {
@@ -447,14 +576,15 @@ pub fn load_state_init(
 
     if let Some(ctor_params) = ctor_params {
         let time_header = gs.make_time_header();
-        if gs.trace {
+        if gs.is_trace(3) {
             println!("apply_constructor: {}", ctor_params);
         }
         let mut error_msg = None;
         let result = apply_constructor(
                         state_init, &abi_file, &abi_info, &ctor_params,
                         private_key.clone(),
-                        trace, gs.trace_on,
+                        gs.config.trace_level,
+                        gs.is_trace(5), gs.config.trace_tvm, gs.trace_on,
                         time_header, gs.get_now(),
                         gs.lt,
                         &mut error_msg,
@@ -481,8 +611,9 @@ pub fn decode_message(
     getter_name: Option<String>,
     out_msg: &TonBlockMessage,
     additional_value: u64,
+    is_debot_call: bool,
 ) -> MsgAbiInfo {
-    let mut decoded_msg = decode_body(gs, abi_info, getter_name, out_msg);
+    let mut decoded_msg = decode_body(gs, abi_info, getter_name, out_msg, is_debot_call);
     if let Some(value) = get_msg_value(&out_msg) {
         decoded_msg.fix_value(value + additional_value);
     }

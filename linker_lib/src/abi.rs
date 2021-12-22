@@ -97,6 +97,7 @@ pub fn decode_body(
     abi_info: &AbiInfo,
     method: Option<String>,
     out_msg: &TonBlockMessage,
+    is_debot_call: bool,
 ) -> MsgAbiInfo {
 
     let internal = out_msg.is_internal();
@@ -104,13 +105,14 @@ pub fn decode_body(
 
     // TODO: refactor this function
 
-    if gs.trace {
-        println!("decode_body {:?} {:?}", body, &method);
+    if gs.is_trace(3) {
+        println!("decode_body: {:?} {:?}", &method, body);
     }
 
     if body.is_none() {
         return MsgAbiInfo::create_empty();
     }
+    
     let body = body.unwrap();
 
     let abi_str = abi_info.text();
@@ -130,16 +132,31 @@ pub fn decode_body(
 
     // Check for a call to a remote method
     if let Some(res) = gs.all_abis.decode_function_call(&body, internal) {
-        // println!(">> {} {}", res.function_name, res.params);
+        if gs.is_trace(5) {
+            println!("decode_function_call - {} {}", res.function_name, res.params);
+        }
         return MsgAbiInfo::create_call(res.params, res.function_name);
     }
 
     // Check for event
     let s = decode_unknown_function_response(abi_str.clone(), body.clone(), internal);
     if let Ok(s) = s {
-        return MsgAbiInfo::create_event(s.params, s.function_name);
+        if gs.is_trace(5) {
+            println!("decode_unknown_function_response - {} {}", s.function_name, s.params);
+        }
+        if is_debot_call {
+            let mut abi_info = MsgAbiInfo::create_answer(s.params, s.function_name);
+            abi_info.set_debot_mode();
+            return abi_info;
+        } else {
+            return MsgAbiInfo::create_event(s.params, s.function_name);
+        }
     }
 
+    if gs.is_trace(2) {
+        println!("Unknown message!");
+    }
+    
     return MsgAbiInfo::create_unknown();
 }
 

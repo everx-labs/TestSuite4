@@ -30,39 +30,6 @@ extern crate ton_types;
 extern crate ton_vm;
 extern crate ton_abi;
 
-mod printer;
-mod util;
-mod abi;
-mod actions;
-mod debug_info;
-mod global_state;
-mod exec;
-mod call_contract;
-mod messages;
-
-use global_state::{
-    GlobalState, GLOBAL_STATE,
-};
-
-use ton_block::Serializable;
-use util::{
-    decode_address, load_from_file,
-};
-
-use messages::{
-    MessageInfo2,
-};
-
-use exec::{
-    exec_contract_and_process_actions,
-    generate_contract_address,
-    dispatch_message_impl,
-    deploy_contract_impl,
-    call_contract_impl,
-    load_state_init,
-    encode_message_body_impl,
-};
-
 use serde_json::Value as JsonValue;
 
 use ed25519_dalek::{
@@ -78,6 +45,11 @@ use pyo3::wrap_pyfunction;
 use pyo3::exceptions::PyRuntimeError;
 
 use std::io::Cursor;
+use std::io::Write;
+
+use ton_block::{
+    Serializable, CurrencyCollection,
+};
 
 use ton_types::{
     SliceData,
@@ -86,17 +58,72 @@ use ton_types::{
     BagOfCells
 };
 
-use std::io::Write;
+mod printer;
+mod util;
+mod abi;
+mod actions;
+mod debots;
+mod debug_info;
+mod global_state;
+mod exec;
+mod call_contract;
+mod messages;
 
-#[pyfunction]
-fn set_trace(trace: bool) -> PyResult<()> {
-    GLOBAL_STATE.lock().unwrap().trace = trace;
-    Ok(())
-}
+use global_state::{
+    GlobalState, GlobalConfig, GLOBAL_STATE,
+};
+
+use util::{
+    decode_address, load_from_file,
+};
+
+use messages::{
+    CallContractMsgInfo,
+    MsgInfo,
+};
+
+use debots::{
+    build_internal_message,
+};
+
+use exec::{
+    exec_contract_and_process_actions,
+    generate_contract_address,
+    dispatch_message_impl,
+    deploy_contract_impl,
+    call_contract_impl,
+    load_state_init,
+    encode_message_body_impl,
+    decode_message,
+};
 
 #[pyfunction]
 fn trace_on() -> PyResult<()> {
     GLOBAL_STATE.lock().unwrap().trace_on = true;
+    Ok(())
+}
+
+#[pyfunction]
+fn set_debot_keypair(secret: Option<String>, pubkey: Option<String>) -> PyResult<()> {
+    let keypair = if secret.is_none() {
+        None
+    } else {
+        Some(ton_client::crypto::KeyPair::new(pubkey.unwrap(), secret.unwrap()))
+    };
+    GLOBAL_STATE.lock().unwrap().debot_keypair = keypair;
+    Ok(())
+}
+
+#[pyfunction]
+fn get_global_config() -> PyResult<GlobalConfig> {
+    let config = GLOBAL_STATE.lock().unwrap().config.clone();
+    Ok(config)
+}
+
+#[pyfunction]
+fn set_global_config(cfg: GlobalConfig) -> PyResult<()> {
+    let mut gs = GLOBAL_STATE.lock().unwrap();
+    gs.config = cfg;
     Ok(())
 }
 
@@ -110,7 +137,7 @@ fn gen_addr(
     wc: i8
 ) -> PyResult<String> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
-    let trace = gs.trace;
+    // let trace = gs.is_trace(1);
 
     let abi_info = gs.all_abis.from_file(&abi_file)
                      .map_err(|e| PyRuntimeError::new_err(e))?;
@@ -124,7 +151,6 @@ fn gen_addr(
         &initial_data,
         &pubkey,
         &private_key,
-        trace,
     ).map_err(|e| PyRuntimeError::new_err(e))?;
     
     let addr = generate_contract_address(&state_init, wc);
@@ -146,7 +172,7 @@ fn deploy_contract(
     balance: u64,
 ) -> PyResult<String> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
-    let trace = gs.trace;
+    // let trace = gs.is_trace(1);
 
     let abi_info = gs.all_abis.from_file(&abi_file)
                      .map_err(|e| PyRuntimeError::new_err(e))?;
@@ -160,7 +186,6 @@ fn deploy_contract(
         &initial_data,
         &pubkey,
         &private_key,
-        trace,
     ).map_err(|e| PyRuntimeError::new_err(e))?;
 
     let target_address = override_address.map(|addr| decode_address(&addr));
@@ -240,7 +265,7 @@ fn set_balance(address: String, balance: u64) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn dispatch_message(msg_id: u32) -> PyResult<(i32, Vec<String>, i64, Option<String>)> {
+fn dispatch_message(msg_id: u32) -> PyResult<(i32, Vec<String>, i64, Option<String>, Option<String>)> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let result = dispatch_message_impl(&mut gs, msg_id);
     gs.last_trace = result.trace.clone();
@@ -270,17 +295,18 @@ fn set_contract_abi(address_str: Option<String>, abi_file: String) -> PyResult<(
 fn call_ticktock(
     address_str: String,
     is_tock: bool,
-) -> PyResult<(i32, Vec<String>, i64, Option<String>)> {
+) -> PyResult<(i32, Vec<String>, i64, Option<String>, Option<String>)> {
     let address = decode_address(&address_str);
 
     let mut gs = GLOBAL_STATE.lock().unwrap();
     // TODO: move to call_ticktock_impl()
-    let msg_info = MessageInfo2::with_ticktock(is_tock, address.clone());
+    let msg_info = CallContractMsgInfo::with_ticktock(is_tock, address.clone());
 
     let result = exec_contract_and_process_actions(
         &mut gs,
         &msg_info,
         None, // method
+        false, // is_debot_call
     );
 
     // TODO: register in gs.messages?
@@ -300,14 +326,14 @@ fn log_str(
 }
 
 #[pyfunction]
-fn call_contract(
+fn call_contract(                   // TODO: is this message added to message store?
     address_str: String,
     method: String,
     is_getter: bool,
     is_debot: bool,
     params: String,
     private_key: Option<String>,
-) -> PyResult<(i32, Vec<String>, i64, Option<String>)> {
+) -> PyResult<(i32, Vec<String>, i64, Option<String>, Option<String>)> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let result =
         call_contract_impl(&mut gs, address_str, method,
@@ -345,7 +371,7 @@ fn set_config_param(idx: u32, cell: String) -> PyResult<()> {
     let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
 
     let is_empty = cell.bit_length() == 0;
-    if gs.trace {
+    if gs.is_trace(1) {
         println!("set_config_param {} is_empty={}", idx, is_empty);
     }
     if is_empty {
@@ -455,6 +481,39 @@ fn encode_message_body(abi_file: String, method: String, params: String) -> PyRe
     let result = serialize_toc(&cell.unwrap()).unwrap();
     Ok(base64::encode(&result))
 }
+
+#[pyfunction]
+fn debot_translate_getter_answer(msg_id: u32) -> PyResult<String> {
+    let mut gs = GLOBAL_STATE.lock().unwrap();
+    let msg_info = debots::debot_translate_getter_answer_impl(&mut gs, msg_id)
+        .map_err(|e| PyRuntimeError::new_err(e))?;
+    Ok(msg_info.json_str())
+}
+
+#[pyfunction]
+fn build_int_msg(src: String, dst: String, body: String, value: u64) -> PyResult<String> {
+    let mut gs = GLOBAL_STATE.lock().unwrap();
+
+    let src = decode_address(&src);
+    let dst = decode_address(&dst);
+
+    let contract = gs.get_contract(&dst).unwrap();
+
+    let cell = base64::decode(&body).unwrap();
+    // TODO: util?
+    let mut csor = Cursor::new(cell);
+    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+
+    let msg = build_internal_message(src, dst, cell.into(), CurrencyCollection::with_grams(value));
+
+    let j = decode_message(&gs, contract.abi_info(), None, &msg, 0, false);
+    let msg_info = MsgInfo::create(msg.clone(), j);
+    let msg_info = gs.messages.add(msg_info);
+
+    Ok(msg_info.json_str())
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 /// A Python module implemented in Rust.
 #[pymodule]
@@ -471,10 +530,14 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(fetch_contract_state))?;
 
     m.add_wrapped(wrap_pyfunction!(dispatch_message))?;
+    m.add_wrapped(wrap_pyfunction!(debot_translate_getter_answer))?;
+    m.add_wrapped(wrap_pyfunction!(build_int_msg))?;
+
+    m.add_wrapped(wrap_pyfunction!(get_global_config))?;
+    m.add_wrapped(wrap_pyfunction!(set_global_config))?;
 
     m.add_wrapped(wrap_pyfunction!(set_now))?;
     m.add_wrapped(wrap_pyfunction!(get_now))?;
-    m.add_wrapped(wrap_pyfunction!(set_trace))?;
     m.add_wrapped(wrap_pyfunction!(trace_on))?;
     m.add_wrapped(wrap_pyfunction!(set_contract_abi))?;
     m.add_wrapped(wrap_pyfunction!(set_config_param))?;
@@ -490,6 +553,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(get_last_trace))?;
     m.add_wrapped(wrap_pyfunction!(get_last_error_msg))?;
 
+    m.add_wrapped(wrap_pyfunction!(set_debot_keypair))?;
     m.add_wrapped(wrap_pyfunction!(save_tvc))?;
 
     Ok(())

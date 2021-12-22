@@ -9,8 +9,13 @@
 
 use std::sync::{Arc, Mutex};
 
+use std::cmp::min;
+use std::convert::TryInto;
+
+use num_format::{Locale, ToFormattedString};
+
 use serde::{
-    Serialize,
+    Serialize
 };
 
 use ton_block::{
@@ -47,7 +52,7 @@ use crate::debug_info::{
 
 use crate::messages::{
     AddressWrapper,
-    MessageInfo2,
+    CallContractMsgInfo,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,17 +85,15 @@ pub struct ExecutionResultEx {
 
 pub fn call_contract_ex(
     contract_info:  &ContractInfo,
-    msg_info:       &MessageInfo2,
+    msg_info:       &CallContractMsgInfo,
+    trace_level:    u64,
     debug:          bool,
-    trace2:         bool,
+    trace_tvm_1:    bool,
+    trace_tvm_2:    bool,
     config_params:  Option<Cell>,
     now:            u64,
     lt:             u64,
 ) -> ExecutionResult {
-
-    if debug {
-        println!("call_contract_ex");
-    }
 
     // TODO: Too long function
 
@@ -101,6 +104,11 @@ pub fn call_contract_ex(
     let state_init          = contract_info.state_init();
     let contract_balance    = contract_info.balance();
     let debug_info_filename = contract_info.debug_info_filename();
+
+    if trace_level >= 5 {
+        println!("call_contract_ex: balance = {}",
+                    contract_balance.to_formatted_string(&Locale::en));
+    }
 
     //  0   - internal msg
     // -1   - external msg
@@ -150,15 +158,39 @@ pub fn call_contract_ex(
             .push(int!(func_selector));
     }
 
+    let value_gas: i64 = (value/1000).try_into().unwrap();
+    let balance_gas: i64 = (contract_balance/1000).try_into().unwrap();
+
     let gas = if msg_info.is_external_call() {
-        Gas::test_with_credit(10_000)
+        let max_gas = min(1_000_000, balance_gas);
+        Gas::new(0, 10_000, max_gas, 10)
     } else {
-        Gas::test()
+        if msg_info.is_offchain_ctor_call() || msg_info.is_getter_call() || msg_info.is_debot_call() {
+            Gas::test()
+        } else {
+            if msg_info.ticktock.is_some() {
+                // TODO: not sure if that is correct
+                Gas::test()
+            } else {
+                let max_gas = min(1_000_000, balance_gas);
+                // TODO: is first param correct here?
+                Gas::new(value_gas, 0, max_gas, 10)
+            }
+        }
     };
+
+    if trace_level >= 5 {
+        println!("call_contract_ex: value = {}, gas_credit = {}, gas_limit = {}, max = {}", 
+                value.to_formatted_string(&Locale::en),
+                gas.get_gas_credit().to_formatted_string(&Locale::en),
+                gas.get_gas_limit().to_formatted_string(&Locale::en),
+                gas.get_gas_limit_max().to_formatted_string(&Locale::en),
+            );
+    }
 
     let mut engine = Engine::new().setup(code, Some(registers), Some(stack), Some(gas));
 
-    let debug_info = if debug || trace2 {
+    let debug_info = if debug || trace_tvm_1 || trace_tvm_2 {
         load_debug_info(&state_init, debug_info_filename, debug)
     } else {
         None
@@ -168,7 +200,7 @@ pub fn call_contract_ex(
     let trace1 = trace.clone();
 
     engine.set_trace_callback(move |engine, info| {
-        trace_callback(engine, info, debug, trace2, true, &debug_info, &mut trace.clone().lock().unwrap());
+        trace_callback(engine, info, trace_tvm_1, trace_tvm_2, true, &debug_info, &mut trace.clone().lock().unwrap());
     });
 
     let mut error_msg = None;
@@ -191,17 +223,19 @@ pub fn call_contract_ex(
 
     let gas_usage = engine.get_gas().get_gas_used();
 
-    if debug {
+    if trace_level >= 10 || trace_tvm_1 {
         println!("TVM terminated with exit code {}", exit_code);
         println!("Gas used: {}", gas_usage);
         println!("");
-        println!("{}", engine.dump_stack("Post-execution stack state", false));
-        println!("{}", engine.dump_ctrls(false));
+        if trace_level >= 15 {
+            println!("{}", engine.dump_stack("Post-execution stack state", false));
+            println!("{}", engine.dump_ctrls(false));
+        }
     }
 
     let gas_credit = engine.get_gas().get_gas_credit();
 
-    if debug {
+    if trace_level >= 10 {
         println!("credit = {}", gas_credit);
     }
 
@@ -291,8 +325,8 @@ fn initialize_registers(
 fn trace_callback(
     _engine: &Engine,
     info: &EngineTraceInfo,
-    trace: bool,
-    trace2: bool,
+    trace_tvm_1: bool,
+    trace_tvm_2: bool,
     extended: bool,
     debug_info: &Option<ContractDebugInfo>,
     result: &mut Vec<TraceStepInfo>,
@@ -300,12 +334,12 @@ fn trace_callback(
 
     let fname = get_function_name(&debug_info, &info.cmd_code);
 
-    if trace2 {
+    if trace_tvm_2 {
         let info2 = TraceStepInfo::from(&info, fname.clone());
         result.push(info2);
     }
 
-    if trace {
+    if trace_tvm_1 {
         println!("{}: {}", info.step, info.cmd_str);
 
         if extended {
@@ -332,7 +366,12 @@ fn trace_callback(
     }
 
     if info.info_type == EngineTraceInfoType::Dump {
-        println!("logstr: {}", info.cmd_str);
+        let s = &info.cmd_str;
+        if s.chars().last().unwrap() == '\n' {
+            print!("logstr: {}", s);
+        } else {
+            println!("logstr: {}", s);
+        }
     }
 }
 
