@@ -1,3 +1,24 @@
+## 24-12-2021: TestSuite4 0.5.0 alpha-1
+
+### CHANGES / IMPROVEMENTS
+
+- added `expect_ec` parameter to `dispatch_messages()`
+- added support for loading ABI from `.abi` instead of `.abi.json`
+
+### FIXES
+
+- fixed incorrect behaviour when exception thrown after `tvm.commit()`
+
+### EXPERIMENTAL
+
+- added wrappers for `call_method` (.m) and `call_method_signed` (.ms)
+- enabled wrappers generation by default (`G_GENERATE_GETTERS = True`)
+
+### OTHER
+
+- BaseContract: added `tvc_path` and `abi_path` properties
+- more info about unknown message at trace_level == 1
+
 ## 20-12-2021: TestSuite4 0.5.0 alpha-0
 
 ### NEW

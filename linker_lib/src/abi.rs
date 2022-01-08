@@ -1,7 +1,7 @@
 /*
-    This file is part of TON OS.
+    This file is part of Ever OS.
 
-    TON OS is free software: you can redistribute it and/or modify
+    Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
     Copyright 2019-2021 (c) TON LABS
@@ -153,8 +153,8 @@ pub fn decode_body(
         }
     }
 
-    if gs.is_trace(2) {
-        println!("Unknown message!");
+    if gs.is_trace(1) {
+        println!("Unknown message! body = {:?}", body);
     }
     
     return MsgAbiInfo::create_unknown();

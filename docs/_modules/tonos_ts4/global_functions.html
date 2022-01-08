@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.global_functions - TestSuite4 v0.4.1</title>
+        <title>tonos_ts4.global_functions - TestSuite4 v0.5.0a1</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.4.1</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a1</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.4.1</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.5.0a1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -141,7 +141,7 @@
 <span class="kn">import</span> <span class="nn">hashlib</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="nb">globals</span> <span class="k">as</span> <span class="n">g</span>
-<span class="kn">from</span> <span class="nn">.globals</span> <span class="kn">import</span> <span class="n">GRAM</span><span class="p">,</span> <span class="n">EMPTY_CELL</span>
+<span class="kn">from</span> <span class="nn">.globals</span> <span class="kn">import</span> <span class="n">EVER</span><span class="p">,</span> <span class="n">GRAM</span><span class="p">,</span> <span class="n">EMPTY_CELL</span>
 <span class="kn">from</span> <span class="nn">.util</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">.address</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">.abi</span> <span class="kn">import</span> <span class="o">*</span>
@@ -327,6 +327,19 @@
             <span class="n">s</span> <span class="o">=</span> <span class="s1">'Addr(</span><span class="si">{}</span><span class="s1">)'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">s</span>
 
+<span class="k">def</span> <span class="nf">format_addr_colored</span><span class="p">(</span><span class="n">addr</span><span class="p">,</span> <span class="n">color1</span><span class="p">,</span> <span class="n">color2</span><span class="p">):</span>
+    <span class="n">Address</span><span class="o">.</span><span class="n">ensure_address</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">addr</span><span class="o">.</span><span class="n">is_none</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">colorize</span><span class="p">(</span><span class="n">color1</span><span class="p">,</span> <span class="s1">'addr_none'</span><span class="p">)</span>
+    <span class="n">addr</span> <span class="o">=</span> <span class="n">addr</span><span class="o">.</span><span class="n">str</span><span class="p">()</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">addr</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">addr</span> <span class="ow">in</span> <span class="nb">globals</span><span class="o">.</span><span class="n">NICKNAMES</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">colorize</span><span class="p">(</span><span class="n">color1</span><span class="p">,</span> <span class="nb">globals</span><span class="o">.</span><span class="n">NICKNAMES</span><span class="p">[</span><span class="n">addr</span><span class="p">])</span> <span class="o">+</span> <span class="n">colorize</span><span class="p">(</span><span class="n">color2</span><span class="p">,</span> <span class="s1">' (</span><span class="si">{}</span><span class="s1">)'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+        <span class="c1"># s = "{} ({})".format(globals.NICKNAMES[addr], s)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">colorize</span><span class="p">(</span><span class="n">color1</span><span class="p">,</span> <span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">s</span>
+
 <span class="k">def</span> <span class="nf">gen_addr</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">initial_data</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">keypair</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">wc</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
     <span class="sd">"""Generates contract addresss.</span>
 
@@ -406,6 +419,8 @@
 
 <span class="k">def</span> <span class="nf">make_path</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ext</span><span class="p">):</span>
     <span class="n">fn</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">globals</span><span class="o">.</span><span class="n">G_TESTS_PATH</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">'.abi.json'</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fn</span> <span class="o">+</span> <span class="s1">'.abi'</span><span class="p">):</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="s1">'.abi'</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">fn</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">'.boc'</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">fn</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ext</span><span class="p">):</span>
             <span class="n">fn</span> <span class="o">+=</span> <span class="n">ext</span>
@@ -444,8 +459,13 @@
     <span class="n">fn</span> <span class="o">=</span> <span class="n">make_path</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s1">'.tvc'</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Cell</span><span class="p">(</span><span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">load_data_cell</span><span class="p">(</span><span class="n">fn</span><span class="p">))</span></div>
 
+<span class="k">def</span> <span class="nf">evers</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="s1">'</span><span class="si">{:.3f}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span> <span class="o">/</span> <span class="n">EVER</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'.000'</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span>
+
+<span class="c1"># deprecated</span>
 <span class="k">def</span> <span class="nf">grams</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="k">return</span> <span class="s1">'</span><span class="si">{:.3f}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span> <span class="o">/</span> <span class="n">GRAM</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'.000'</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">evers</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ensure_balance"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.ensure_balance">[docs]</a><span class="k">def</span> <span class="nf">ensure_balance</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">got</span><span class="p">,</span> <span class="n">dismiss</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="sd">"""Checks the contract balance for exact match.</span>
@@ -463,7 +483,7 @@
     <span class="n">diff</span> <span class="o">=</span> <span class="n">got</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">expected</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">epsilon</span><span class="p">:</span>
         <span class="k">return</span>
-    <span class="n">xtra</span> <span class="o">=</span> <span class="s2">", diff = </span><span class="si">{}</span><span class="s2">g (</span><span class="si">{}</span><span class="s2">)"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">grams</span><span class="p">(</span><span class="n">diff</span><span class="p">),</span> <span class="n">diff</span><span class="p">)</span>
+    <span class="n">xtra</span> <span class="o">=</span> <span class="s2">", diff = </span><span class="si">{}</span><span class="s2">g (</span><span class="si">{}</span><span class="s2">)"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">evers</span><span class="p">(</span><span class="n">diff</span><span class="p">),</span> <span class="n">diff</span><span class="p">)</span>
     <span class="k">assert</span> <span class="n">eq</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">expected</span><span class="p">),</span> <span class="n">got</span><span class="p">,</span> <span class="n">xtra</span> <span class="o">=</span> <span class="n">xtra</span><span class="p">,</span> <span class="n">dismiss</span> <span class="o">=</span> <span class="n">dismiss</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="register_abi"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.register_abi">[docs]</a><span class="k">def</span> <span class="nf">register_abi</span><span class="p">(</span><span class="n">contract_name</span><span class="p">):</span>
@@ -507,6 +527,24 @@
         <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">Cell</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
+
+<span class="c1"># TODO: finalize and add docs</span>
+<span class="k">def</span> <span class="nf">build_int_msg</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">abi_file</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">Address</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="n">Address</span><span class="p">)</span>
+
+    <span class="n">msg_body</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">encode_message_body</span><span class="p">(</span><span class="n">abi_file</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+    <span class="c1"># src = zero_addr(-1)</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">build_int_msg</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="n">dst</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="n">msg_body</span><span class="o">.</span><span class="n">raw_</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="c1"># verbose_(msg)</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">Msg</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+    <span class="n">verbose_</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">ts4</span><span class="o">.</span><span class="n">globals</span><span class="o">.</span><span class="n">QUEUE</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">msg</span>
+
+<span class="k">def</span> <span class="nf">last_gas</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">globals</span><span class="o">.</span><span class="n">G_LAST_GAS_USED</span>
 
 <div class="viewcode-block" id="set_config_param"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.set_config_param">[docs]</a><span class="k">def</span> <span class="nf">set_config_param</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
     <span class="sd">"""Sets global config parameter.</span>

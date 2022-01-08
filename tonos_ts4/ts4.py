@@ -1,7 +1,7 @@
 """
-    This file is part of TON OS.
+    This file is part of Ever OS.
 
-    TON OS is free software: you can redistribute it and/or modify
+    Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
     Copyright 2019-2021 (c) TON LABS
@@ -119,7 +119,7 @@ def process_actions(result: ExecutionResult, expect_ec = [0]):
             globals.QUEUE.append(msg)
     return (result.gas_used, answer)
 
-def dispatch_messages(callback = None, limit = None):
+def dispatch_messages(callback = None, limit = None, expect_ec = 0):
     """Dispatches all messages in the queue one by one until the queue becomes empty.
 
     :param callback: Callback to be called for each processed message.
@@ -136,7 +136,7 @@ def dispatch_messages(callback = None, limit = None):
         if callback is not None and callback(msg, False) == False:
             pop_msg()
             continue
-        dispatch_one_message()
+        dispatch_one_message(expect_ec)
         if callback is not None:
             callback(msg, True)
         if limit is not None:

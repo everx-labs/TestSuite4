@@ -1,5 +1,5 @@
 
-G_VERSION		= '0.5.0a0'
+G_VERSION		= '0.5.0a1'
 
 QUEUE           = []
 EVENTS          = []
@@ -26,6 +26,7 @@ G_STOP_ON_NO_ACCOUNT = True
 G_STOP_ON_NO_FUNDS 	= True
 G_CHECK_ABI_TYPES	= True
 G_AUTODISPATCH      = False
+G_GENERATE_GETTERS  = True
 
 G_LAST_GAS_USED     = 0
 

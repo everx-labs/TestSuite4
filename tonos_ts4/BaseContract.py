@@ -7,27 +7,34 @@ from .address import *
 from .abi     import *
 from .global_functions import *
 
-def build_getter_wrapper(contract, method, inputs):
-    def func(*args):
-        if len(args) != len(inputs):
-            raise ts4.BaseException('Wrong parameters count: expected {}, got {}'.format(len(inputs), len(args)))
-        d = dict()
-        for i in range(len(args)):
-            t = AbiType(inputs[i])
-            d[t.name] = args[i]
-        return contract.call_getter(method, d)
-    return func
+def _build_params_dict(args, inputs):
+    if len(args) != len(inputs):
+        raise ts4.BaseException('Wrong parameters count: expected {}, got {}'.format(len(inputs), len(args)))
+    d = dict()
+    for i in range(len(args)):
+        t = AbiType(inputs[i])
+        d[t.name] = args[i]
+    return d
+
+def _build_getter_wrapper(contract, method, inputs, mode):
+    def func0(*args):
+        return contract.call_getter(method, _build_params_dict(args, inputs))
+    def func1(*args):
+        return contract.call_method(method, _build_params_dict(args, inputs))
+    def func2(*args):
+        return contract.call_method_signed(method, _build_params_dict(args, inputs))
+
+    if mode == 0:       return func0
+    if mode == 1:       return func1
+    if mode == 2:       return func2
 
 class Getters:
-    def __init__(self, contract):
+    def __init__(self, contract, mode):
         assert isinstance(contract, BaseContract)
         abi = contract.abi
         for rec in abi.json['functions']:
             method = rec['name']
-            output_types = abi.find_getter_output_types(method)
-            if output_types == []:
-                continue
-            setattr(self, method, build_getter_wrapper(contract, method, rec['inputs']))
+            setattr(self, method, _build_getter_wrapper(contract, method, rec['inputs'], mode))
 
 
 class BaseContract:
@@ -104,9 +111,9 @@ class BaseContract:
                 pubkey = pubkey.replace('0x', '')
             try:
                 address = globals.core.deploy_contract(
-                    full_name + '.tvc',
-                    full_name + '.abi.json',
-                    ts4.json_dumps(ctor_params) if ctor_params is not None else None,
+                    self.tvc_path,
+                    self.abi_path,
+                    ts4.json_dumps(ctor_params)  if ctor_params  is not None else None,
                     ts4.json_dumps(initial_data) if initial_data is not None else None,
                     pubkey,
                     private_key,
@@ -126,6 +133,27 @@ class BaseContract:
         self._init2(name, address, just_deployed = just_deployed)
         if nickname is not None:
             ts4.register_nickname(self.address, nickname)
+
+        if globals.G_GENERATE_GETTERS:
+            self._generate_wrappers()
+
+    @property
+    def abi_path(self):
+        """Returns path to contract ABI file.
+
+        :return: Path to ABI file
+        :rtype: str
+        """
+        return self.abi.path_
+
+    @property
+    def tvc_path(self):
+        """Returns path to contract TVC file.
+
+        :return: Path to TVC file
+        :rtype: str
+        """
+        return ts4.make_path(self.name_, '.tvc')
 
     @property
     def abi_json(self):
@@ -425,9 +453,10 @@ class BaseContract:
         """
         return (self.private_key_, self.public_key_)
 
-    # TODO: add docs
-    def generate_getters(self):
-        self.g = Getters(self)
+    def _generate_wrappers(self):
+        self.g  = Getters(self, 0)  # getter
+        self.m  = Getters(self, 1)  # method
+        self.ms = Getters(self, 2)  # signed method
         # assert False
 
 

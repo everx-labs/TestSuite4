@@ -281,6 +281,8 @@ def load_keypair(filename):
 
 def make_path(name, ext):
     fn = os.path.join(globals.G_TESTS_PATH, name)
+    if ext == '.abi.json' and os.path.exists(fn + '.abi'):
+        ext = '.abi'
     if not fn.endswith('.boc'):
         if not fn.endswith(ext):
             fn += ext
