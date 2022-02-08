@@ -11,6 +11,8 @@ use std::convert::TryInto;
 
 use ed25519_dalek::Keypair;
 
+use serde::Serialize;
+
 use ton_block::{
     Message as TonBlockMessage,
     MsgAddressInt,
@@ -61,7 +63,7 @@ use crate::debug_info::{
     TraceStepInfo,
 };
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct ExecutionResult2 {
     exit_code: i32,
     aborted: bool,
@@ -70,11 +72,12 @@ pub struct ExecutionResult2 {
     info: Option<String>,
     pub trace: Option<Vec<TraceStepInfo>>,
     debot_answer_msg: Option<String>,
+    accept_in_getter: bool,
 }
 
 impl ExecutionResult2 {
-    pub fn unpack(self) -> (i32, Vec<String>, i64, Option<String>, Option<String>) {
-        (self.exit_code, self.out_actions, self.gas, self.info, self.debot_answer_msg)
+    pub fn to_string(self) -> String {
+        serde_json::to_string(&self).unwrap()
     }
     fn with_actions(result: ExecutionResult, out_actions: Vec<String>) -> ExecutionResult2 {
         ExecutionResult2 {
@@ -85,6 +88,7 @@ impl ExecutionResult2 {
             trace:       result.trace,
             out_actions: out_actions,
             debot_answer_msg: None,
+            accept_in_getter: result.info.accept_in_getter,
         }
     }
     fn with_aborted(reason: String) -> ExecutionResult2 {
@@ -143,6 +147,7 @@ pub fn apply_constructor(
     abi_info: &AbiInfo,
     ctor_params : &str,
     private_key: Option<String>,
+    global_gas_limit: u64,
     trace_level: u64,
     debug: bool,
     trace1: bool,
@@ -181,6 +186,7 @@ pub fn apply_constructor(
     let result = call_contract_ex(
         &contract_info,
         &msg_info,
+        global_gas_limit,
         trace_level,
         debug, trace1, trace2,
         None,
@@ -331,7 +337,7 @@ pub fn dispatch_message_impl(
         is_debot_call,
     );
     
-    if is_debot_call {
+    if is_debot_call && gs.is_trace(5) {
         println!("!!!!!!!!!!!! debot_call_info = {:?}", debot_call_info);
     }
 
@@ -339,7 +345,9 @@ pub fn dispatch_message_impl(
 
     if !is_success_exit_code(result.exit_code) {
         if is_debot_call {
-            println!("!!!!!!!!!!!! on_error = {:?}", result.exit_code);
+            if gs.is_trace(5) {
+                println!("!!!!!!!!!!!! on_error = {:?}", result.exit_code);
+            }
             let info = debot_call_info.unwrap();
             let src = decode_address(&info.dst_addr);
             let dst = info.debot_addr.as_ref().unwrap();
@@ -415,6 +423,7 @@ pub fn exec_contract_and_process_actions(
     let mut result = call_contract_ex(
         &contract_info,
         &msg_info,
+        gs.config.global_gas_limit,
         gs.config.trace_level,
         gs.is_trace(5), gs.config.trace_tvm, gs.trace_on,
         make_config_params(&gs),
@@ -425,6 +434,7 @@ pub fn exec_contract_and_process_actions(
     gs.last_error_msg = result.info.error_msg.clone();
 
     result.info.inbound_msg_id = msg_info.id();
+
     gs.register_run_result(result.info.clone());
 
     if result.info_msg == Some("no_accept".to_string()) {
@@ -535,9 +545,10 @@ pub fn call_contract_impl(
     let mut msg_abi = decode_message(&gs, &abi_info, Some(method.clone()), &msg, 0, false);
     msg_abi.fix_call(is_getter);
     let msg_info = MsgInfo::create(msg.clone(), msg_abi);
-    gs.messages.add(msg_info);
+    let msg_id = gs.messages.add(msg_info).id();
 
-    let msg_info = CallContractMsgInfo::with_getter(msg, is_getter, is_debot);
+    let mut msg_info = CallContractMsgInfo::with_getter(msg, is_getter, is_debot);
+    msg_info.set_id(msg_id);
 
     let result = exec_contract_and_process_actions(
         gs, &msg_info, Some(method.clone()), false,
@@ -556,7 +567,7 @@ pub fn load_state_init(
     pubkey: &Option<String>,
     private_key: &Option<String>,
 ) -> Result<StateInit, String> {
-    let mut state_init = load_from_file(&contract_file);
+    let mut state_init = load_from_file(&contract_file)?;
     if let Some(pubkey) = pubkey {
         let result = set_public_key(&mut state_init, pubkey.clone());
         if result.is_err() {
@@ -583,6 +594,7 @@ pub fn load_state_init(
         let result = apply_constructor(
                         state_init, &abi_file, &abi_info, &ctor_params,
                         private_key.clone(),
+                        gs.config.global_gas_limit,
                         gs.config.trace_level,
                         gs.is_trace(5), gs.config.trace_tvm, gs.trace_on,
                         time_header, gs.get_now(),

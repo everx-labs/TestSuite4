@@ -52,7 +52,7 @@ use ton_block::{
 };
 
 use ton_types::{
-    SliceData,
+    SliceData, Cell,
     serialize_toc,
     cells_serialization::{deserialize_cells_tree},
     BagOfCells
@@ -265,11 +265,11 @@ fn set_balance(address: String, balance: u64) -> PyResult<()> {
 }
 
 #[pyfunction]
-fn dispatch_message(msg_id: u32) -> PyResult<(i32, Vec<String>, i64, Option<String>, Option<String>)> {
+fn dispatch_message(msg_id: u32) -> PyResult<String> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let result = dispatch_message_impl(&mut gs, msg_id);
     gs.last_trace = result.trace.clone();
-    Ok(result.unpack())
+    Ok(result.to_string())
 }
 
 #[pyfunction]
@@ -295,7 +295,7 @@ fn set_contract_abi(address_str: Option<String>, abi_file: String) -> PyResult<(
 fn call_ticktock(
     address_str: String,
     is_tock: bool,
-) -> PyResult<(i32, Vec<String>, i64, Option<String>, Option<String>)> {
+) -> PyResult<String> {
     let address = decode_address(&address_str);
 
     let mut gs = GLOBAL_STATE.lock().unwrap();
@@ -311,7 +311,7 @@ fn call_ticktock(
 
     // TODO: register in gs.messages?
 
-    Ok(result.unpack())
+    Ok(result.to_string())
 }
 
 #[pyfunction]
@@ -333,7 +333,7 @@ fn call_contract(                   // TODO: is this message added to message st
     is_debot: bool,
     params: String,
     private_key: Option<String>,
-) -> PyResult<(i32, Vec<String>, i64, Option<String>, Option<String>)> {
+) -> PyResult<String> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
     let result =
         call_contract_impl(&mut gs, address_str, method,
@@ -342,7 +342,7 @@ fn call_contract(                   // TODO: is this message added to message st
         gs.last_trace = result.trace.clone();
     }
     let result = result.map_err(|e| PyRuntimeError::new_err(e))?;
-    Ok(result.unpack())
+    Ok(result.to_string())
 }
 
 // ---------------------------------------------------------------------------------------
@@ -366,9 +366,7 @@ fn get_now() -> PyResult<u64> {
 fn set_config_param(idx: u32, cell: String) -> PyResult<()> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
 
-    let cell = base64::decode(&cell).unwrap();
-    let mut csor = Cursor::new(cell);
-    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+    let cell = decode_cell(cell);
 
     let is_empty = cell.bit_length() == 0;
     if gs.is_trace(1) {
@@ -411,10 +409,7 @@ fn make_keypair(seed : Option<u64>) -> PyResult<(String, String)> {
 
 #[pyfunction]
 fn sign_cell(cell: String, secret: String) -> PyResult<String> {
-    let cell = base64::decode(&cell).unwrap();
-    // TODO: util?
-    let mut csor = Cursor::new(cell);
-    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+    let cell = decode_cell(cell);
 
     let secret = hex::decode(secret).unwrap();
     let keypair = Keypair::from_bytes(&secret).expect("error: invalid key");
@@ -454,9 +449,36 @@ fn get_last_error_msg() -> PyResult<Option<String>> {
     Ok(gs.last_error_msg.clone())
 }
 
+fn dump_cell_rec(cell: Cell, pfx: String) {
+    let slice: SliceData = cell.into();
+    println!("{}> {:x}", pfx, slice);
+    let n = slice.remaining_references();
+    let pfx = pfx + "  ";
+    for i in 0..n {
+        dump_cell_rec(slice.reference(i).unwrap(), pfx.clone());
+    }
+}
+
+#[pyfunction]
+fn dump_cell(cell: String) -> PyResult<()> {
+    let cell = decode_cell(cell);
+    // println!("cell = {:?}", cell);
+    // println!("cell = {}", cell);
+    // println!("cell = {:x}", cell);
+    // let slice: SliceData = cell.clone().into();
+
+    // println!("slice = {:?}", slice);
+    // println!("slice = {}", slice);
+    // println!("slice = {:x}", slice);
+
+    dump_cell_rec(cell, "".to_string());
+
+    Ok(())
+}
+
 #[pyfunction]
 fn load_code_cell(filename: String) -> PyResult<String> {
-    let state_init = load_from_file(&filename);
+    let state_init = load_from_file(&filename).map_err(|e| PyRuntimeError::new_err(e))?;
     let code = state_init.code.unwrap();
     let bytes = serialize_toc(&code).unwrap();
     Ok(base64::encode(&bytes))
@@ -465,11 +487,34 @@ fn load_code_cell(filename: String) -> PyResult<String> {
 #[pyfunction]
 fn load_data_cell(filename: String) -> PyResult<String> {
     // TODO: add tests for that
-    let state_init = load_from_file(&filename);
+    let state_init = load_from_file(&filename).map_err(|e| PyRuntimeError::new_err(e))?;
     let data = state_init.data.unwrap();
     let bytes = serialize_toc(&data).unwrap();
     Ok(base64::encode(&bytes))
 }
+
+fn decode_cell(cell: String) -> Cell {
+    let cell = base64::decode(&cell).unwrap();
+    let mut csor = Cursor::new(cell);
+    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+    cell    
+}
+
+#[pyfunction]
+fn get_compiler_version_from_cell(cell: String) -> PyResult<Option<String>> {
+    let cell = decode_cell(cell);
+    let result = ton_client::boc::get_compiler_version_from_cell(cell).unwrap();
+    return Ok(result);
+}
+
+#[pyfunction]
+fn get_cell_repr_hash(cell: String) -> PyResult<String> {
+    // TODO: make CellWrapper class interoperable with Python
+    let cell = decode_cell(cell);
+    let hash = cell.repr_hash().as_hex_string();
+    Ok(hash)
+}
+
 
 #[pyfunction]
 fn encode_message_body(abi_file: String, method: String, params: String) -> PyResult<String> {
@@ -499,10 +544,7 @@ fn build_int_msg(src: String, dst: String, body: String, value: u64) -> PyResult
 
     let contract = gs.get_contract(&dst).unwrap();
 
-    let cell = base64::decode(&body).unwrap();
-    // TODO: util?
-    let mut csor = Cursor::new(cell);
-    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+    let cell = decode_cell(body);
 
     let msg = build_internal_message(src, dst, cell.into(), CurrencyCollection::with_grams(value));
 
@@ -546,7 +588,10 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(sign_cell))?;
     m.add_wrapped(wrap_pyfunction!(load_code_cell))?;
     m.add_wrapped(wrap_pyfunction!(load_data_cell))?;
+    m.add_wrapped(wrap_pyfunction!(get_compiler_version_from_cell))?;
+    m.add_wrapped(wrap_pyfunction!(get_cell_repr_hash))?;
     m.add_wrapped(wrap_pyfunction!(encode_message_body))?;
+    m.add_wrapped(wrap_pyfunction!(dump_cell))?;
 
     m.add_wrapped(wrap_pyfunction!(get_all_runs))?;
     m.add_wrapped(wrap_pyfunction!(get_all_messages))?;

@@ -1,3 +1,35 @@
+## 07-02-2022: TestSuite4 0.5.0 alpha-2
+
+### NEW
+
+- added `ts4.get_cell_repr_hash()`
+- implemented `ts4.set_global_gas_limit()`
+- added warning when `ACCEPT` is called in getter (`globals.G_WARN_ON_ACCEPT_IN_GETTER`)
+- added `globals.G_SHOW_FULL_STACKTRACE = False` for simplifying stacktrace in case of exception
+- added UnexpectedExitCodeException class
+- added `ts4.globals.G_OVERRIDE_EXPECT_EC`
+- added `core.get_compiler_version_from_cell()`
+
+### CHANGES / IMPROVEMENTS
+
+- reverted deprecation of `decode_ints` parameter for `call_getter()`
+- improved error reporting and error handling
+
+### FIXES
+
+- fixed an issue with `Decoder(skip_fields=...)` not working for tuples
+- fixed an issue with wrong message decoding in case of functionId collision
+- fixed an issue with possibly empty error for some ABI errors
+
+### EXPERIMENTAL
+
+- added `tutorials/hello_debot.py`
+
+### OTHER
+
+- updated documentation
+
+
 ## 24-12-2021: TestSuite4 0.5.0 alpha-1
 
 ### CHANGES / IMPROVEMENTS

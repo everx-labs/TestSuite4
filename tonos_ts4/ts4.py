@@ -4,7 +4,7 @@
     Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
-    Copyright 2019-2021 (c) TON LABS
+    Copyright 2019-2022 (c) TON LABS
 """
 
 import sys
@@ -36,12 +36,32 @@ globals.set_core(core)
 class BaseException(Exception):
     def __init__(self, msg):
         super(Exception, self).__init__(msg)
+    def clone(self):
+        return ts4.BaseException(str(self))
 
+class UnexpectedExitCodeException(BaseException):
+    def __init__(self, expected, real):
+        self.expected   = expected
+        self.real       = real
+        super(BaseException, self).__init__(
+            'Unexpected exit code: {}, expected {}'.format(real, expected))
+    def clone(self):
+        return UnexpectedExitCodeException(self.expected, self.real)
+
+def translate_exception(exception):
+    # print('translate_exception:', exception)
+    if globals.G_SHOW_FULL_STACKTRACE:
+        return exception
+    verbose_(exception)
+    if isinstance(exception, ts4.BaseException):
+        return exception.clone()
+    return exception
 
 # TODO: Global decoding params. Add documentation
 decoder = Decoder.defaults()
 
 def check_exitcode(expected_ec, real_ec):
+    expected_ec = either_or(ts4.globals.G_OVERRIDE_EXPECT_EC, expected_ec)
     assert isinstance(expected_ec, list)
     if real_ec not in expected_ec:
         xtra = None
@@ -59,7 +79,7 @@ def check_exitcode(expected_ec, real_ec):
         if last_error is not None:
             verbose_('{}{}'.format(last_error, xtra))
         if globals.G_STOP_AT_CRASH:
-            raise BaseException('Unexpected exit code: {}, expected {}'.format(real_ec, expected_ec))
+            raise UnexpectedExitCodeException(expected_ec, real_ec)
 
 def process_actions(result: ExecutionResult, expect_ec = [0]):
     # print('process_actions: expect_ec = {}'.format(expect_ec))
@@ -119,12 +139,13 @@ def process_actions(result: ExecutionResult, expect_ec = [0]):
             globals.QUEUE.append(msg)
     return (result.gas_used, answer)
 
-def dispatch_messages(callback = None, limit = None, expect_ec = 0):
+def dispatch_messages(callback = None, limit = None, expect_ec = [0]):
     """Dispatches all messages in the queue one by one until the queue becomes empty.
 
     :param callback: Callback to be called for each processed message.
         If callback returns False then the given message is skipped.
     :param num limit: Limit the number of processed messages by a given value.
+    :param num expect_ec: List of expected exit codes
     :return: False if queue was empty, True otherwise
     :rtype: bool
 
@@ -156,37 +177,32 @@ def dispatch_one_message(expect_ec = 0):
         expect_ec = [expect_ec]
     msg = pop_msg()
     globals.ALL_MESSAGES.append(msg)
-    # if is_method_call(msg, 'onRoundComplete'):
-        # dump_message(msg)
     dump1 = globals.G_VERBOSE or globals.G_DUMP_MESSAGES
     dump2 = globals.G_MSG_FILTER is not None and globals.G_MSG_FILTER(msg.data)
     if dump1 or dump2:
-        dump_message(msg)
+        print_int_msg(msg)
     if msg.dst.is_none():
         # TODO: a getter's reply. Add a test for that
         return
 
     # dump_struct(msg.data)
 
-    CONFIRM_INPUT_ADDR = Address('-31:16653eaf34c921467120f2685d425ff963db5cbb5aa676a62a2e33bfc3f6828a')
-    if msg.dst == CONFIRM_INPUT_ADDR:
-        verbose_('!!!!!!!!!!!!')
+    # CONFIRM_INPUT_ADDR = Address('-31:16653eaf34c921467120f2685d425ff963db5cbb5aa676a62a2e33bfc3f6828a')
+    # if msg.dst == CONFIRM_INPUT_ADDR:
+    #     verbose_('!!!!!!!!!!!!')
 
-    result = globals.core.dispatch_message(msg.id)
-    result = ExecutionResult(result)
+    result = dispatch_message_ext(msg.id)
 
     globals.G_LAST_GAS_USED = result.gas_used
 
     # print('actions =', result.actions)
-    error_msg = None
+    exception = None
     try:
         gas, answer = process_actions(result, expect_ec)
     except Exception as err:
-        print(err)
-        error_msg = str(err)
-    if error_msg is not None:
-        verbose_('!!!' + error_msg)
-        raise ts4.BaseException(error_msg)
+        exception = translate_exception(err)
+    if exception is not None:
+        raise exception
     if result.debot_answer_msg is not None:
         answer_msg = Msg(json.loads(result.debot_answer_msg))
         # verbose_(answer_msg)
@@ -211,10 +227,10 @@ class BalanceWatcher:
         self.balance_   = contract.balance
         self.epsilon_   = 2
 
-    def ensure_change(self, expected_diff):
+    def ensure_change(self, expected_diff, epsilon = None):
         cur_balance     = self.contract_.balance
         prev_balance    = self.balance_
-        ensure_balance(prev_balance + expected_diff, cur_balance, epsilon = self.epsilon_)
+        ensure_balance(prev_balance + expected_diff, cur_balance, epsilon = either_or(epsilon, self.epsilon_))
         self.balance_   = cur_balance
 
 

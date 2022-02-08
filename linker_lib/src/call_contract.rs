@@ -12,8 +12,6 @@ use std::sync::{Arc, Mutex};
 use std::cmp::min;
 use std::convert::TryInto;
 
-use num_format::{Locale, ToFormattedString};
-
 use serde::{
     Serialize
 };
@@ -55,6 +53,10 @@ use crate::messages::{
     CallContractMsgInfo,
 };
 
+use crate::util::{
+    format3,
+};
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Clone, Debug)]
@@ -75,6 +77,7 @@ pub struct ExecutionResultInfo {
     pub exit_code:      i32,
     pub error_msg:      Option<String>,
     pub gas:            i64,
+    pub accept_in_getter:   bool,
 }
 
 #[derive(Clone, Debug)]
@@ -86,6 +89,7 @@ pub struct ExecutionResultEx {
 pub fn call_contract_ex(
     contract_info:  &ContractInfo,
     msg_info:       &CallContractMsgInfo,
+    global_gas_limit:   u64,
     trace_level:    u64,
     debug:          bool,
     trace_tvm_1:    bool,
@@ -106,8 +110,7 @@ pub fn call_contract_ex(
     let debug_info_filename = contract_info.debug_info_filename();
 
     if trace_level >= 5 {
-        println!("call_contract_ex: balance = {}",
-                    contract_balance.to_formatted_string(&Locale::en));
+        println!("call_contract_ex: balance = {}", format3(contract_balance));
     }
 
     //  0   - internal msg
@@ -161,18 +164,22 @@ pub fn call_contract_ex(
     let value_gas: i64 = (value/1000).try_into().unwrap();
     let balance_gas: i64 = (contract_balance/1000).try_into().unwrap();
 
+    let global_gas_limit: i64 = if global_gas_limit > 0 { global_gas_limit as i64 } else { 1_000_000 };
+
     let gas = if msg_info.is_external_call() {
-        let max_gas = min(1_000_000, balance_gas);
+        let max_gas = min(global_gas_limit, balance_gas);
         Gas::new(0, 10_000, max_gas, 10)
     } else {
-        if msg_info.is_offchain_ctor_call() || msg_info.is_getter_call() || msg_info.is_debot_call() {
+        if msg_info.is_getter_call() {
+            Gas::new(0, 1_000_000_000, 1_000_000_000, 10)
+        } else if msg_info.is_offchain_ctor_call() || msg_info.is_debot_call() {
             Gas::test()
         } else {
             if msg_info.ticktock.is_some() {
                 // TODO: not sure if that is correct
                 Gas::test()
             } else {
-                let max_gas = min(1_000_000, balance_gas);
+                let max_gas = min(global_gas_limit, balance_gas);
                 // TODO: is first param correct here?
                 Gas::new(value_gas, 0, max_gas, 10)
             }
@@ -181,10 +188,10 @@ pub fn call_contract_ex(
 
     if trace_level >= 5 {
         println!("call_contract_ex: value = {}, gas_credit = {}, gas_limit = {}, max = {}", 
-                value.to_formatted_string(&Locale::en),
-                gas.get_gas_credit().to_formatted_string(&Locale::en),
-                gas.get_gas_limit().to_formatted_string(&Locale::en),
-                gas.get_gas_limit_max().to_formatted_string(&Locale::en),
+                format3(value),
+                format3(gas.get_gas_credit()),
+                format3(gas.get_gas_limit()),
+                format3(gas.get_gas_limit_max()),
             );
     }
 
@@ -239,6 +246,10 @@ pub fn call_contract_ex(
         println!("credit = {}", gas_credit);
     }
 
+    let accept_in_getter = msg_info.is_getter_call() && gas_credit == 0;
+
+    let gas_credit = if msg_info.is_getter_call() { 0 } else { gas_credit };
+
     let mut state_init = state_init.clone();
     if gas_credit == 0 {
         match engine.get_committed_state().get_root() {
@@ -277,6 +288,7 @@ pub fn call_contract_ex(
         exit_code:      exit_code,
         error_msg:      error_msg,
         gas:            gas_usage,
+        accept_in_getter: accept_in_getter,
     };
 
     ExecutionResult {

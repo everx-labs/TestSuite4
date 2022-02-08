@@ -60,6 +60,8 @@ pub struct GlobalConfig {
                         pub trace_tvm: bool,
     #[pyo3(get, set)]
                         pub gas_fee: bool,
+    #[pyo3(get, set)]
+                        pub global_gas_limit: u64,
     // pub trace_on: bool,
     // pub config_params: HashMap<u32, Cell>,
     // pub debot_keypair: Option<KeyPair>,

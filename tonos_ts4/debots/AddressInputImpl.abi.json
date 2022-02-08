@@ -1,0 +1,52 @@
+{
+	"ABI version": 2,
+	"version": "2.1",
+	"header": ["pubkey", "time", "expire"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "get",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"prompt","type":"string"}
+			],
+			"outputs": [
+				{"name":"value","type":"address"}
+			]
+		},
+		{
+			"name": "reply_get",
+			"inputs": [
+				{"name":"debot_addr","type":"address"},
+				{"name":"answerId","type":"uint32"},
+				{"name":"answer_addr","type":"address"}
+			],
+			"outputs": [
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+		{
+			"name": "Get",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"prompt","type":"string"}
+			],
+			"outputs": [
+			]
+		}
+	],
+	"fields": [
+		{"name":"_pubkey","type":"uint256"},
+		{"name":"_timestamp","type":"uint64"},
+		{"name":"_constructorFlag","type":"bool"}
+	]
+}

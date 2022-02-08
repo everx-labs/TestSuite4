@@ -1,3 +1,12 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
 import os
 
 from . import globals
@@ -5,7 +14,9 @@ from . import ts4
 
 from .address import *
 from .abi     import *
+from .dump    import *
 from .global_functions import *
+from .core    import ExecutionResult
 
 def _build_params_dict(args, inputs):
     if len(args) != len(inputs):
@@ -35,7 +46,6 @@ class Getters:
         for rec in abi.json['functions']:
             method = rec['name']
             setattr(self, method, _build_getter_wrapper(contract, method, rec['inputs'], mode))
-
 
 class BaseContract:
     """The :class:`BaseContract <BaseContract>` object, which is responsible
@@ -72,6 +82,8 @@ class BaseContract:
         :param num balance: Desired contract balance
         :param str nickname: Nickname of the contract used in verbose output
         """
+        if name.startswith('debots:'):
+            name = os.path.join(os.path.dirname(__file__), name.replace('debots:', 'debots/'))
         self.name_ = name
         full_name = os.path.join(globals.G_TESTS_PATH, name)
         just_deployed = False
@@ -87,47 +99,42 @@ class BaseContract:
         balance = either_or(balance, globals.G_DEFAULT_BALANCE)
 
         # Load ABI
-        self.abi = Abi(name)
+        exception = None
+        try:
+            self.abi = Abi(name)
+        except FileNotFoundError as err:
+            exception = FileNotFoundError(str(err))
+        if exception is not None:
+            raise exception
 
         if address is None:
             if globals.G_VERBOSE:
                 print(blue(f'Deploying {full_name} {p_n}'))
 
-            error_msg = None
-
+            exception = None
             try:
                 if ctor_params is not None:
                     ctor_params = ts4.check_method_params(self.abi, 'constructor', ctor_params)
-
                 if initial_data is not None:
                     initial_data = ts4.check_method_params(self.abi, '.data', initial_data)
             except Exception as err:
-                error_msg = str(err)
-            if error_msg is not None:
-                raise ts4.BaseException(error_msg)
+                exception = ts4.translate_exception(err)
+            if exception is not None:
+                raise exception
+
 
             if pubkey is not None:
                 assert pubkey[0:2] == '0x'
                 pubkey = pubkey.replace('0x', '')
             try:
-                address = globals.core.deploy_contract(
-                    self.tvc_path,
-                    self.abi_path,
-                    ts4.json_dumps(ctor_params)  if ctor_params  is not None else None,
-                    ts4.json_dumps(initial_data) if initial_data is not None else None,
-                    pubkey,
-                    private_key,
-                    wc,
-                    override_address,
-                    balance,
-                )
-            except Exception as err:
+                address = ts4.deploy_contract_ext(self, ctor_params, initial_data, pubkey, private_key, wc, override_address, balance)
+            except RuntimeError as err:
                 tvm_err_msg = globals.core.get_last_error_msg()
                 if tvm_err_msg is not None:
                     ts4.verbose_(tvm_err_msg)
-                error_msg = str(err)
-            if error_msg is not None:
-                raise ts4.BaseException(error_msg)
+                exception = ts4.BaseException(err)
+            if exception is not None:
+                raise exception
             address = Address(address)
             just_deployed = True
         self._init2(name, address, just_deployed = just_deployed)
@@ -222,16 +229,11 @@ class BaseContract:
         assert isinstance(params,    dict)
         assert isinstance(expect_ec, int)
 
-        result = globals.core.call_contract(
-            self.addr.str(),
-            method,
-            True,   # is_getter
-            False,  # is_debot
-            ts4.json_dumps(params),
-            None,   # private_key
-        )
+        result = ts4.call_contract_ext(self.addr, method, params, is_getter = True)
 
-        result = ExecutionResult(result)
+        if result.data['accept_in_getter'] and globals.G_WARN_ON_ACCEPT_IN_GETTER:
+            print(yellow('WARNING! Accept in getter!'))
+
         assert eq(None, result.error)
         # print(actions)
 
@@ -245,6 +247,9 @@ class BaseContract:
         for msg in actions:
             if not msg.is_answer():
                 raise ts4.BaseException("Unexpected message type '{}' in getter output".format(msg.type))
+
+        if len(result.actions) == 0:
+            raise ts4.BaseException("Getter '{}' returns no answer".format(method))
 
         assert eq(1, len(result.actions)), 'len(actions) == 1'
         msg = Msg(json.loads(result.actions[0]))
@@ -277,21 +282,24 @@ class BaseContract:
         :return: A returned value in decoded form (exact type depends on the type of getter)
         :rtype: type
         """
-        error_msg = None
+        exception = None
         try:
             values = self.call_getter_raw(method, params, expect_ec)
         except Exception as err:
-            error_msg = str(err)
-        if error_msg is not None:
-            raise ts4.BaseException(error_msg)
+            exception = ts4.translate_exception(err)
+        if exception is not None:
+            raise exception
 
         if expect_ec > 0:
             # TODO: ensure values is empty?
             return
 
+        decoder = either_or(decoder, ts4.decoder).fill_nones(ts4.decoder)
+
         if decode_ints is not None:
-            deprecated_msg = "Parameter is deprecated. Use `decoder = ts4.Decoder(ints = {})` instead.".format(decode_ints)
-            assert False, red(deprecated_msg)
+            decoder.ints = decode_ints
+            # deprecated_msg = "Parameter is deprecated. Use `decoder = ts4.Decoder(ints = {})` instead.".format(decode_ints)
+            # assert False, red(deprecated_msg)
 
         if decode_tuples is not None:
             deprecated_msg = "Parameter is deprecated. Use `decoder = ts4.Decoder(tuples = {})` instead.".format(decode_tuples)
@@ -301,7 +309,6 @@ class BaseContract:
             deprecated_msg = "Parameter is deprecated. Use `decoder = ts4.Decoder(skip_fields = ...)` instead."
             assert False, red(deprecated_msg)
 
-        decoder = either_or(decoder, ts4.decoder).fill_nones(ts4.decoder)
 
         # print('values =', values)
         answer = decode_contract_answer(self.abi, values, method, key, decoder)
@@ -348,33 +355,25 @@ class BaseContract:
         if isinstance(expect_ec, int):
             expect_ec = [expect_ec]
         if globals.G_VERBOSE:
-            print(blue('> ext_in_msg') + grey(': '), end='')
-            print(cyan('    '), grey('->'), bright_cyan(format_addr(self.addr)))
-            print(cyan(grey('    method: ') + bright_cyan('{}'.format(method))
-            + grey('\n    params: ') + cyan('{}'.format(Params.stringify(prettify_dict(params))))) + '\n')
+            print_ext_in_msg(self.addr, method, params)
 
-        error_msg = None
+        exception = None
         try:
             params = ts4.check_method_params(self.abi, method, params)
         except Exception as err:
-            error_msg = str(err)
-        if error_msg is not None:
-            raise ts4.BaseException(error_msg)
+            exception = ts4.translate_exception(err)
+        if exception is not None:
+            raise exception
 
         try:
-            result = globals.core.call_contract(
-                self.addr.str(),
-                method,
-                False, # is_getter
-                is_debot,
-                ts4.json_dumps(params),
-                private_key,
-            )
-            result = ExecutionResult(result)
-        except:
+            result = ts4.call_contract_ext(self.addr, method, params, is_debot = is_debot, private_key = private_key)
+        except RuntimeError as err:
             if globals.G_VERBOSE:
+                print(err.__repr__())
                 print("Exception when calling '{}' with params {}".format(method, ts4.json_dumps(params)))
-            raise
+            exception = ts4.BaseException(str(err))
+        if exception is not None:
+            raise exception
 
         globals.G_LAST_GAS_USED = result.gas_used
 
@@ -397,19 +396,25 @@ class BaseContract:
                 raise ts4.BaseException(red(err_msg))
             verbose_(err_msg)
         else:
-            error_msg = None
+            exception = None
             try:
                 _gas, answer = ts4.process_actions(result, expect_ec)
             except Exception as err:
-                error_msg = str(err)
-            if error_msg is not None:
-                raise ts4.BaseException(error_msg)
+                exception = ts4.translate_exception(err)
+            if exception is not None:
+                raise exception
             if answer is not None:
                 assert answer.is_answer(method)
                 key = None
                 decoded_answer = decode_contract_answer(self.abi, answer.params, method, key, ts4.decoder)
             if globals.G_AUTODISPATCH:
-                ts4.dispatch_messages()
+                try:
+                    ts4.dispatch_messages()
+                except Exception as err:
+                    exception = ts4.translate_exception(err)
+                if exception is not None:
+                    raise exception
+
             if answer is not None:
                 return decoded_answer
 
@@ -435,8 +440,7 @@ class BaseContract:
         """
         if globals.G_VERBOSE:
             print('ticktock {}'.format(format_addr(self.address)))
-        result = globals.core.call_ticktock(self.address.str(), is_tock)
-        result = ExecutionResult(result)
+        result = ts4.call_ticktock_ext(self.address, is_tock)
         gas, answer = ts4.process_actions(result)
         assert answer is None
         return gas
@@ -465,7 +469,10 @@ def _make_tuple_result(abi, method, values, decoder):
     res_dict = {}
     res_arr  = []
     for type in types:
-        value = ts4.decode_json_value(values[type.name], type, decoder)
+        if type.name in decoder.skip_fields:
+            value = values[type.name]
+        else:
+            value = ts4.decode_json_value(values[type.name], type, decoder)
         res_dict[type.name] = value
         res_arr.append(value)
     if decoder.tuples is True:
@@ -478,7 +485,7 @@ def decode_contract_answer(
     values,
     method,
     key,
-    params,
+    decoder,
 ):
     keys = list(values.keys())
 
@@ -486,7 +493,7 @@ def decode_contract_answer(
         key = keys[0]
 
     if key is None:
-        return _make_tuple_result(abi, method, values, params)
+        return _make_tuple_result(abi, method, values, decoder)
 
     assert key is not None
     assert key in values, red("No '{}' in {}".format(key, values))
@@ -494,5 +501,5 @@ def decode_contract_answer(
     value     = values[key]
     abi_type  = abi.find_getter_output_type(method, key)
 
-    return ts4.decode_json_value(value, abi_type, params)
+    return ts4.decode_json_value(value, abi_type, decoder)
 

@@ -10,7 +10,7 @@
 use num::{BigInt};
 use crate::num::ToPrimitive;
 
-use num_format::{Locale, ToFormattedString};
+use num_format::{Locale, ToFormattedString, ToFormattedStr};
 
 use std::io::Cursor;
 use std::time::SystemTime;
@@ -62,13 +62,12 @@ pub fn convert_address(address: UInt256, wc: i8) -> MsgAddressInt {
     MsgAddressInt::with_standart(None, wc, AccountId::from(address)).unwrap()
 }
 
-pub fn load_from_file(contract_file: &str) -> StateInit {
+pub fn load_from_file(contract_file: &str) -> Result<StateInit, String> {
     let content = std::fs::read(contract_file)
-        .map_err(|e| format!("Cannot load {}: {}", contract_file, e))
-        .unwrap();      // TODO: return error
+        .map_err(|e| format!("Cannot load {}: {}", contract_file, e))?;
     let mut csor = Cursor::new(content);
     let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
-    StateInit::construct_from(&mut cell.into()).unwrap()
+    Ok(StateInit::construct_from(&mut cell.into()).unwrap())
 }
 
 pub fn create_external_inbound_msg(src_addr: MsgAddressExt, dst_addr: MsgAddressInt, body: Option<SliceData>) -> Message {
@@ -118,6 +117,6 @@ pub fn decode_address(address: &String) -> MsgAddressInt {
     MsgAddressInt::from_str(&address).unwrap()
 }
 
-pub fn format3(value: u64) -> String {
+pub fn format3<T: ToFormattedStr>(value: T) -> String {
     value.to_formatted_string(&Locale::en)
 }

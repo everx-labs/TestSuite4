@@ -1,0 +1,82 @@
+{
+	"ABI version": 2,
+	"version": "2.1",
+	"header": ["pubkey", "time", "expire"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "input",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"prompt","type":"string"},
+				{"name":"multiline","type":"bool"}
+			],
+			"outputs": [
+				{"name":"value","type":"string"}
+			]
+		},
+		{
+			"name": "print",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"message","type":"string"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "printf",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"fmt","type":"string"},
+				{"name":"fargs","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "call_input",
+			"inputs": [
+				{"name":"addr","type":"address"},
+				{"name":"answerId","type":"uint32"},
+				{"name":"txt","type":"string"}
+			],
+			"outputs": [
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+		{
+			"name": "Print",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"message","type":"string"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "Input",
+			"inputs": [
+				{"name":"answerId","type":"uint32"},
+				{"name":"prompt","type":"string"},
+				{"name":"multiline","type":"bool"}
+			],
+			"outputs": [
+			]
+		}
+	],
+	"fields": [
+		{"name":"_pubkey","type":"uint256"},
+		{"name":"_timestamp","type":"uint64"},
+		{"name":"_constructorFlag","type":"bool"}
+	]
+}

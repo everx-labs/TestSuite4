@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.ts4 - TestSuite4 v0.5.0a1</title>
+        <title>tonos_ts4.ts4 - TestSuite4 v0.5.0a2</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a1</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a2</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.5.0a1</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.5.0a2</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -142,7 +142,7 @@
 <span class="sd">    Ever OS is free software: you can redistribute it and/or modify</span>
 <span class="sd">    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)</span>
 
-<span class="sd">    Copyright 2019-2021 (c) TON LABS</span>
+<span class="sd">    Copyright 2019-2022 (c) TON LABS</span>
 <span class="sd">"""</span>
 
 <span class="kn">import</span> <span class="nn">sys</span>
@@ -174,12 +174,32 @@
 <span class="k">class</span> <span class="nc">BaseException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="ne">Exception</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
+<span class="k">class</span> <span class="nc">UnexpectedExitCodeException</span><span class="p">(</span><span class="ne">BaseException</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">real</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expected</span>   <span class="o">=</span> <span class="n">expected</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">real</span>       <span class="o">=</span> <span class="n">real</span>
+        <span class="nb">super</span><span class="p">(</span><span class="ne">BaseException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="s1">'Unexpected exit code: </span><span class="si">{}</span><span class="s1">, expected </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">expected</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">UnexpectedExitCodeException</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expected</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">translate_exception</span><span class="p">(</span><span class="n">exception</span><span class="p">):</span>
+    <span class="c1"># print('translate_exception:', exception)</span>
+    <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_SHOW_FULL_STACKTRACE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">exception</span>
+    <span class="n">verbose_</span><span class="p">(</span><span class="n">exception</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exception</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">exception</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">exception</span>
 
 <span class="c1"># TODO: Global decoding params. Add documentation</span>
 <span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="o">.</span><span class="n">defaults</span><span class="p">()</span>
 
 <span class="k">def</span> <span class="nf">check_exitcode</span><span class="p">(</span><span class="n">expected_ec</span><span class="p">,</span> <span class="n">real_ec</span><span class="p">):</span>
+    <span class="n">expected_ec</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">ts4</span><span class="o">.</span><span class="n">globals</span><span class="o">.</span><span class="n">G_OVERRIDE_EXPECT_EC</span><span class="p">,</span> <span class="n">expected_ec</span><span class="p">)</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expected_ec</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">real_ec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">expected_ec</span><span class="p">:</span>
         <span class="n">xtra</span> <span class="o">=</span> <span class="kc">None</span>
@@ -197,7 +217,7 @@
         <span class="k">if</span> <span class="n">last_error</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">verbose_</span><span class="p">(</span><span class="s1">'</span><span class="si">{}{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last_error</span><span class="p">,</span> <span class="n">xtra</span><span class="p">))</span>
         <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_STOP_AT_CRASH</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">BaseException</span><span class="p">(</span><span class="s1">'Unexpected exit code: </span><span class="si">{}</span><span class="s1">, expected </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">real_ec</span><span class="p">,</span> <span class="n">expected_ec</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="n">UnexpectedExitCodeException</span><span class="p">(</span><span class="n">expected_ec</span><span class="p">,</span> <span class="n">real_ec</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">process_actions</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">ExecutionResult</span><span class="p">,</span> <span class="n">expect_ec</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
     <span class="c1"># print('process_actions: expect_ec = {}'.format(expect_ec))</span>
@@ -257,12 +277,13 @@
             <span class="nb">globals</span><span class="o">.</span><span class="n">QUEUE</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">gas_used</span><span class="p">,</span> <span class="n">answer</span><span class="p">)</span>
 
-<div class="viewcode-block" id="dispatch_messages"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.dispatch_messages">[docs]</a><span class="k">def</span> <span class="nf">dispatch_messages</span><span class="p">(</span><span class="n">callback</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">limit</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">expect_ec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="dispatch_messages"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.dispatch_messages">[docs]</a><span class="k">def</span> <span class="nf">dispatch_messages</span><span class="p">(</span><span class="n">callback</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">limit</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">expect_ec</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
     <span class="sd">"""Dispatches all messages in the queue one by one until the queue becomes empty.</span>
 
 <span class="sd">    :param callback: Callback to be called for each processed message.</span>
 <span class="sd">        If callback returns False then the given message is skipped.</span>
 <span class="sd">    :param num limit: Limit the number of processed messages by a given value.</span>
+<span class="sd">    :param num expect_ec: List of expected exit codes</span>
 <span class="sd">    :return: False if queue was empty, True otherwise</span>
 <span class="sd">    :rtype: bool</span>
 
@@ -294,37 +315,32 @@
         <span class="n">expect_ec</span> <span class="o">=</span> <span class="p">[</span><span class="n">expect_ec</span><span class="p">]</span>
     <span class="n">msg</span> <span class="o">=</span> <span class="n">pop_msg</span><span class="p">()</span>
     <span class="nb">globals</span><span class="o">.</span><span class="n">ALL_MESSAGES</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-    <span class="c1"># if is_method_call(msg, 'onRoundComplete'):</span>
-        <span class="c1"># dump_message(msg)</span>
     <span class="n">dump1</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span> <span class="ow">or</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_DUMP_MESSAGES</span>
     <span class="n">dump2</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_MSG_FILTER</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_MSG_FILTER</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">dump1</span> <span class="ow">or</span> <span class="n">dump2</span><span class="p">:</span>
-        <span class="n">dump_message</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">print_int_msg</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">is_none</span><span class="p">():</span>
         <span class="c1"># TODO: a getter's reply. Add a test for that</span>
         <span class="k">return</span>
 
     <span class="c1"># dump_struct(msg.data)</span>
 
-    <span class="n">CONFIRM_INPUT_ADDR</span> <span class="o">=</span> <span class="n">Address</span><span class="p">(</span><span class="s1">'-31:16653eaf34c921467120f2685d425ff963db5cbb5aa676a62a2e33bfc3f6828a'</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">dst</span> <span class="o">==</span> <span class="n">CONFIRM_INPUT_ADDR</span><span class="p">:</span>
-        <span class="n">verbose_</span><span class="p">(</span><span class="s1">'!!!!!!!!!!!!'</span><span class="p">)</span>
+    <span class="c1"># CONFIRM_INPUT_ADDR = Address('-31:16653eaf34c921467120f2685d425ff963db5cbb5aa676a62a2e33bfc3f6828a')</span>
+    <span class="c1"># if msg.dst == CONFIRM_INPUT_ADDR:</span>
+    <span class="c1">#     verbose_('!!!!!!!!!!!!')</span>
 
-    <span class="n">result</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">dispatch_message</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">ExecutionResult</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dispatch_message_ext</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
 
     <span class="nb">globals</span><span class="o">.</span><span class="n">G_LAST_GAS_USED</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">gas_used</span>
 
     <span class="c1"># print('actions =', result.actions)</span>
-    <span class="n">error_msg</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">gas</span><span class="p">,</span> <span class="n">answer</span> <span class="o">=</span> <span class="n">process_actions</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">expect_ec</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-        <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">error_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">verbose_</span><span class="p">(</span><span class="s1">'!!!'</span> <span class="o">+</span> <span class="n">error_msg</span><span class="p">)</span>
-        <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+        <span class="n">exception</span> <span class="o">=</span> <span class="n">translate_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">exception</span>
     <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">debot_answer_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">answer_msg</span> <span class="o">=</span> <span class="n">Msg</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">debot_answer_msg</span><span class="p">))</span>
         <span class="c1"># verbose_(answer_msg)</span>
@@ -349,10 +365,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">balance_</span>   <span class="o">=</span> <span class="n">contract</span><span class="o">.</span><span class="n">balance</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_</span>   <span class="o">=</span> <span class="mi">2</span>
 
-    <span class="k">def</span> <span class="nf">ensure_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expected_diff</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">ensure_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expected_diff</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="n">cur_balance</span>     <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contract_</span><span class="o">.</span><span class="n">balance</span>
         <span class="n">prev_balance</span>    <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">balance_</span>
-        <span class="n">ensure_balance</span><span class="p">(</span><span class="n">prev_balance</span> <span class="o">+</span> <span class="n">expected_diff</span><span class="p">,</span> <span class="n">cur_balance</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_</span><span class="p">)</span>
+        <span class="n">ensure_balance</span><span class="p">(</span><span class="n">prev_balance</span> <span class="o">+</span> <span class="n">expected_diff</span><span class="p">,</span> <span class="n">cur_balance</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">epsilon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">balance_</span>   <span class="o">=</span> <span class="n">cur_balance</span>
 
 

@@ -1,0 +1,70 @@
+{
+	"ABI version": 2,
+	"version": "2.1",
+	"header": ["pubkey", "time", "expire"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "select",
+			"inputs": [
+				{"name":"title","type":"string"},
+				{"name":"description","type":"string"},
+				{"components":[{"name":"title","type":"string"},{"name":"description","type":"string"},{"name":"handlerId","type":"uint32"}],"name":"items","type":"tuple[]"}
+			],
+			"outputs": [
+				{"name":"value0","type":"uint32"}
+			]
+		},
+		{
+			"name": "reply_select",
+			"inputs": [
+				{"name":"index","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "m_title",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_title","type":"string"}
+			]
+		},
+		{
+			"name": "m_description",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"m_description","type":"string"}
+			]
+		},
+		{
+			"name": "m_items",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"title","type":"string"},{"name":"description","type":"string"},{"name":"handlerId","type":"uint32"}],"name":"m_items","type":"tuple[]"}
+			]
+		}
+	],
+	"data": [
+	],
+	"events": [
+	],
+	"fields": [
+		{"name":"_pubkey","type":"uint256"},
+		{"name":"_timestamp","type":"uint64"},
+		{"name":"_constructorFlag","type":"bool"},
+		{"name":"m_address","type":"address"},
+		{"name":"m_title","type":"string"},
+		{"name":"m_description","type":"string"},
+		{"components":[{"name":"title","type":"string"},{"name":"description","type":"string"},{"name":"handlerId","type":"uint32"}],"name":"m_items","type":"tuple[]"}
+	]
+}

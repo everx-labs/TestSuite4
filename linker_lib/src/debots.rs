@@ -107,7 +107,7 @@ pub fn debot_translate_getter_answer_impl(
     // TODO: translate message here!
     let answer_msg = build_answer_msg(&msg_info.ton_msg().unwrap(),
         debot_call_info.answer_id, debot_call_info.func_id,
-        contract_addr.clone(), debot_addr).unwrap();
+        contract_addr.clone(), debot_addr, gs.config.trace_level).unwrap();
 
     // println!("answer_msg = {:?}", answer_msg);
 
@@ -168,8 +168,11 @@ fn build_answer_msg(
     func_id: u32,
     dest_addr: MsgAddressInt,
     debot_addr: MsgAddressInt,
+    trace_level: u64,
 ) -> Option<TonBlockMessage> {
-    println!("!!! build_answer_msg: dest_addr = {}, debot_addr = {}", dest_addr, debot_addr);
+    if trace_level >= 5 {
+        println!("!!! build_answer_msg: dest_addr = {}, debot_addr = {}", dest_addr, debot_addr);
+    }
     if out_message.is_internal() {
         return None;
     }

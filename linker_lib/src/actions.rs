@@ -17,6 +17,8 @@ use ton_block::{
     Message as TonBlockMessage,
     MsgAddressInt,
     OutAction, 
+    CurrencyCollection,
+    CommonMsgInfo,
 };
 
 use crate::global_state::{
@@ -191,6 +193,15 @@ pub fn process_actions(
     Ok(msgs)
 }
 
+fn set_int_msg_value(msg: &mut TonBlockMessage, additional_value: u64) {
+    let value = get_msg_value(msg);
+    if additional_value > 0 {
+        if let CommonMsgInfo::IntMsgInfo(hdr) = msg.header_mut() {
+            hdr.value = CurrencyCollection::with_grams(value.unwrap() + additional_value);
+        }
+    }
+}
+
 fn process_action(
     gs: &GlobalState,
     action: &OutAction,
@@ -209,9 +220,15 @@ fn process_action(
 
             let additional_value = state.process_send_msg(mode, &out_msg)?;
             // println!("{:?}", out_msg);
-            let out_msg = substitute_address(out_msg, &address);
+            let mut out_msg = substitute_address(out_msg, &address);
+            set_int_msg_value(&mut out_msg, additional_value);
+            let additional_value = 0;
 
             let is_debot_call2 = out_msg.src().is_none();
+
+            if !is_debot_call && get_msg_value(&out_msg) == Some(0) {
+                return Ok(None);
+            }
 
             // TODO: is this code needed here? Should it be moved?
             let j = decode_message(&gs, abi_info, method.clone(), &out_msg, additional_value, is_debot_call);

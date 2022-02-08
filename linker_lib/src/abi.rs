@@ -51,7 +51,11 @@ impl AllAbis {
         self.all_abis.iter().map(|pair| pair.1.text().clone()).collect()
     }
 
-    fn decode_function_call(&self, body: &SliceData, internal: bool) -> Option<ton_abi::DecodedMessage> {
+    fn decode_function_call(&self, body: &SliceData, internal: bool, abi_str: &String) -> Option<ton_abi::DecodedMessage> {
+        let res = decode_unknown_function_call(abi_str.clone(), body.clone(), internal);
+        if let Ok(res) = res {
+            return Some(res);
+        }
         for abi_str in self.values() {
             // println!("contract: {}", &contract.name);
             let res = decode_unknown_function_call(abi_str, body.clone(), internal);
@@ -131,7 +135,7 @@ pub fn decode_body(
     }
 
     // Check for a call to a remote method
-    if let Some(res) = gs.all_abis.decode_function_call(&body, internal) {
+    if let Some(res) = gs.all_abis.decode_function_call(&body, internal, &abi_str) {
         if gs.is_trace(5) {
             println!("decode_function_call - {} {}", res.function_name, res.params);
         }

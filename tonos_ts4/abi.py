@@ -1,4 +1,11 @@
-# TODO: add header
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
 
 import copy
 
@@ -121,13 +128,13 @@ def decode_event_inputs(event_def, values):
 def check_method_params(abi, method, params):
     assert isinstance(abi, Abi)
 
-    # ts4.verbose('check_method_params {}'.format(params))
+    # ts4.verbose('check_method_params {} {}'.format(method, params))
     if method == '.data':
         inputs = abi.json['data']
     else:
         func = abi.find_abi_method(method)
         if func is None:
-            raise Exception("Unknown method name '{}'".format(method))
+            raise ts4.BaseException("Unknown method name '{}'".format(method))
         inputs = func['inputs']
     res = {}
     for param in inputs:
@@ -136,7 +143,7 @@ def check_method_params(abi, method, params):
             # ts4.verbose('Raising exception')
             if globals.G_VERBOSE:
                 print('params =', params)
-            raise Exception("Parameter '{}' is missing when calling method '{}'".format(pname, method))
+            raise ts4.BaseException("Parameter '{}' is missing when calling method '{}'".format(pname, method))
         # ts4.dump_struct(param)
         # ts4.dump_struct(params[pname])
         res[pname] = check_param_names_rec(params[pname], AbiType(param))
@@ -147,7 +154,7 @@ def _raise_type_mismatch(expected_type, value, abi_type):
     if ts4.globals.G_CHECK_ABI_TYPES:
         if ts4.globals.G_VERBOSE:
             ts4.verbose_('Expected type: {}'.format(abi_type))
-        raise Exception(msg)
+        raise ts4.BaseException(msg)
     else:
         ts4.verbose_(msg)
 
@@ -167,6 +174,9 @@ def check_param_names_rec(value, abi_type):
         return value
 
     if abi_type.is_array():
+        if not isinstance(value, list):
+            _raise_type_mismatch('list', value, abi_type)
+
         type2 = abi_type.remove_array()
         value2 = []
         for v in value:
@@ -206,12 +216,13 @@ def check_param_names_rec(value, abi_type):
         _raise_type_mismatch('string', value, abi_type)
 
     if type == 'tuple':
-        assert isinstance(value, dict)
+        if not isinstance(value, dict):
+            _raise_type_mismatch('dict', value, abi_type)
         res = {}
         for c in abi_type.components:
             field = c.name
             if not field in value:
-                raise Exception("Field '{}' is missing in structure '{}'".format(field, abi_type.name))
+                raise ts4.BaseException("Field '{}' is missing in structure '{}'".format(field, abi_type.name))
             res[field] = check_param_names_rec(value[field], c)
         return res
 

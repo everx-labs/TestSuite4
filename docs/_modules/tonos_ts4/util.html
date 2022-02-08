@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.util - TestSuite4 v0.5.0a1</title>
+        <title>tonos_ts4.util - TestSuite4 v0.5.0a2</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a1</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a2</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.5.0a1</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.5.0a2</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -136,7 +136,16 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for tonos_ts4.util</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">    This file is part of Ever OS.</span>
+
+<span class="sd">    Ever OS is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)</span>
+
+<span class="sd">    Copyright 2019-2022 (c) TON LABS</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">binascii</span>
 
@@ -248,6 +257,14 @@
         <span class="k">return</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">dismiss</span> <span class="k">else</span> <span class="kc">False</span></div>
 
 <span class="k">def</span> <span class="nf">leq</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="sd">"""Helper function to check that one value is less or equal than enother.</span>
+<span class="sd">    Prints the message in case of mismatch.</span>
+
+<span class="sd">    :param Any v1: First value</span>
+<span class="sd">    :param Any v2: Second value</span>
+<span class="sd">    :return: Result of check</span>
+<span class="sd">    :rtype: bool</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">v1</span> <span class="o">&lt;=</span> <span class="n">v2</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">True</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">red</span><span class="p">(</span><span class="s1">'expected </span><span class="si">{}</span><span class="s1"> &lt;= </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">)))</span>

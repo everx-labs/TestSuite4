@@ -1,0 +1,806 @@
+.version sol 0.54.0
+
+.macro constructor
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7_with_init_storage$
+}
+GETGLOB 6
+THROWIF 51
+ENDS
+ACCEPT
+CALLREF {
+	CALL $c7_to_c4$
+}
+THROW 0
+
+.macro start
+DROP
+GETGLOB 6
+THROWIFNOT 76
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+.loc helloDebot.sol, 13
+ENDS
+.loc helloDebot.sol, 0
+CALLREF {
+	CALL $start_internal_macro$
+}
+DROP
+CALLREF {
+	CALL $c7_to_c4$
+}
+THROW 0
+
+.globl	start_internal
+.type	start_internal, @function
+CALL $start_internal_macro$
+
+.macro start_internal_macro
+.loc helloDebot.sol, 15
+PUSHINT 0
+PUSHREF {
+	.blob x48656c6c6f2c20576f726c6421
+}
+CALLREF {
+	CALL $Terminal_no_obj_print_macro$
+}
+.loc helloDebot.sol, 17
+PUSHINT 645710353
+PUSHREF {
+	.blob x486f7720697320697420676f696e673f
+}
+FALSE
+CALLREF {
+	CALL $Terminal_no_obj_input_macro$
+}
+.loc helloDebot.sol, 0
+
+.macro setUserInput
+DROP
+GETGLOB 6
+THROWIFNOT 76
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+.loc helloDebot.sol, 20
+LDREF
+ENDS
+.loc helloDebot.sol, 0
+CALLREF {
+	CALL $setUserInput_internal_macro$
+}
+DROP
+CALLREF {
+	CALL $c7_to_c4$
+}
+THROW 0
+
+.globl	setUserInput_internal
+.type	setUserInput_internal, @function
+CALL $setUserInput_internal_macro$
+
+.macro setUserInput_internal_macro
+.loc helloDebot.sol, 22
+PUSHINT 0
+TUPLE 0
+NEWC
+PUSHSLICE x596f7520656e74657265642022
+CALLREF {
+	CALL $storeStringInBuilders_macro$
+}
+ROLL 3
+CTOS
+CALLREF {
+	CALL $storeStringInBuilders_macro$
+}
+PUSHSLICE x22
+CALLREF {
+	CALL $storeStringInBuilders_macro$
+}
+CALLREF {
+	CALL $assembleList_macro$
+}
+CALLREF {
+	CALL $Terminal_no_obj_print_macro$
+}
+.loc helloDebot.sol, 0
+
+.macro getDebotInfo
+DROP
+GETGLOB 6
+THROWIFNOT 76
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+.loc helloDebot.sol, 25
+ENDS
+.loc helloDebot.sol, 0
+CALLREF {
+	CALL $getDebotInfo_internal_macro$
+}
+PUSH S10
+PUSHCONT {
+	PUSH S12
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHINT 1
+	STUR 98
+	REVERSE 11, 0
+	NEWC
+	STSLICECONST x00000deb
+	STREF
+	STREF
+	STREF
+	ROLLREV 7
+	NEWC
+	STREF
+	STREF
+	STSLICE
+	STREF
+	ROLLREV 3
+	NEWC
+	STREF
+	STREF
+	STREF
+	STBREFR
+	STBREFR
+	STBREFR
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	BLKDROP 10
+}
+IFELSE
+IFREF {
+	CALL $upd_only_time_in_c4$
+}
+THROW 0
+
+.globl	getDebotInfo_internal
+.type	getDebotInfo_internal, @function
+CALL $getDebotInfo_internal_macro$
+
+.macro getDebotInfo_internal_macro
+.loc helloDebot.sol, 29
+PUSHREF {
+	.blob x48656c6c6f576f726c64204465626f74
+}
+.loc helloDebot.sol, 30
+PUSHREF {
+	.blob x302e322e30
+}
+.loc helloDebot.sol, 31
+PUSHREF {
+	.blob x544f4e204c616273
+}
+.loc helloDebot.sol, 32
+PUSHREF {
+	.blob x
+}
+.loc helloDebot.sol, 33
+PUSHREF {
+	.blob x544f4e204c616273
+}
+.loc helloDebot.sol, 34
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+.loc helloDebot.sol, 35
+PUSHREF {
+	.blob x48656c6c6f2c2049276d2048656c6c6f576f726c64204465426f742e
+}
+.loc helloDebot.sol, 36
+PUSHREF {
+	.blob x656e
+}
+.loc helloDebot.sol, 37
+GETGLOB 11
+DUP
+ISNULL
+THROWIF 63
+.loc helloDebot.sol, 38
+PUSHREF {
+	.blob x
+}
+.loc helloDebot.sol, 0
+
+.macro getRequiredInterfaces
+DROP
+GETGLOB 6
+THROWIFNOT 76
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+.loc helloDebot.sol, 41
+ENDS
+.loc helloDebot.sol, 0
+CALLREF {
+	CALL $getRequiredInterfaces_internal_macro$
+}
+OVER
+PUSHCONT {
+	PUSH S3
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHSLICE x00000000000000000000000036190b42a_
+	STSLICER
+	SWAP
+	UNPAIR
+	XCHG S2
+	STU 32
+	STDICT
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	DROP
+}
+IFELSE
+IFREF {
+	CALL $upd_only_time_in_c4$
+}
+THROW 0
+
+.globl	getRequiredInterfaces_internal
+.type	getRequiredInterfaces_internal, @function
+CALL $getRequiredInterfaces_internal_macro$
+
+.macro getRequiredInterfaces_internal_macro
+.loc helloDebot.sol, 42
+PUSHINT 61327837143279038880828163389518064523935669597243029312953519799871119370467
+PUSHINT 0
+NEWDICT
+PUSHINT 1
+PUSHCONT {
+	ROT
+	NEWC
+	STU 256
+	PUSH S2
+	INC
+	XCHG S3
+	ROT
+	PUSHINT 32
+	DICTUSETB
+}
+REPEAT
+PAIR
+.loc helloDebot.sol, 0
+
+.macro getDebotOptions
+DROP
+GETGLOB 6
+THROWIFNOT 76
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+.loc .solc_imports/Debot.sol, 43
+ENDS
+.loc .solc_imports/Debot.sol, 0
+CALLREF {
+	CALL $getDebotOptions_internal_macro$
+}
+PUSH S4
+PUSHCONT {
+	PUSH S6
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHINT 1
+	STUR 98
+	REVERSE 5, 0
+	NEWC
+	STSLICECONST xa259a30a
+	STU 8
+	STREF
+	STREF
+	STSLICE
+	STBREFR
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	BLKDROP 4
+}
+IFELSE
+IFREF {
+	CALL $upd_only_time_in_c4$
+}
+THROW 0
+
+.globl	getDebotOptions_internal
+.type	getDebotOptions_internal, @function
+CALL $getDebotOptions_internal_macro$
+
+.macro getDebotOptions_internal_macro
+.loc .solc_imports/Debot.sol, 43
+PUSHINT 0
+.loc .solc_imports/Debot.sol, 44
+GETGLOB 11
+ISNULL
+PUSHCONT {
+	PUSHREF {
+		.blob x
+	}
+}
+PUSHCONT {
+	GETGLOB 11
+	DUP
+	ISNULL
+	THROWIF 63
+}
+IFELSE
+.loc .solc_imports/Debot.sol, 45
+GETGLOB 12
+ISNULL
+PUSHCONT {
+	PUSHREF {
+		.blob x
+	}
+}
+PUSHCONT {
+	GETGLOB 12
+	DUP
+	ISNULL
+	THROWIF 63
+}
+IFELSE
+.loc .solc_imports/Debot.sol, 46
+GETGLOB 13
+ISNULL
+PUSHCONT {
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+}
+PUSHCONT {
+	GETGLOB 13
+	DUP
+	ISNULL
+	THROWIF 63
+}
+IFELSE
+.loc .solc_imports/Debot.sol, 47
+GETGLOB 10
+POP S4
+.loc .solc_imports/Debot.sol, 0
+
+.macro setABI
+DROP
+GETGLOB 6
+THROWIFNOT 76
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+.loc .solc_imports/Debot.sol, 51
+LDREF
+ENDS
+.loc .solc_imports/Debot.sol, 0
+CALLREF {
+	CALL $setABI_internal_macro$
+}
+DROP
+CALLREF {
+	CALL $c7_to_c4$
+}
+THROW 0
+
+.globl	setABI_internal
+.type	setABI_internal, @function
+CALL $setABI_internal_macro$
+
+.macro setABI_internal_macro
+.loc .solc_imports/Debot.sol, 52
+GETGLOB 2
+GETGLOB 5
+DUP
+ISNULL
+PUSHCONT {
+	DROP
+	PUSHINT 0
+}
+IF
+EQUAL
+THROWIFNOT 100
+.loc .solc_imports/Debot.sol, 53
+ACCEPT
+.loc .solc_imports/Debot.sol, 54
+GETGLOB 10
+PUSHINT 1
+OR
+SETGLOB 10
+.loc .solc_imports/Debot.sol, 55
+SETGLOB 11
+.loc .solc_imports/Debot.sol, 0
+
+.macro c4_to_c7
+PUSHROOT
+CTOS
+LDU 256 ; pubkey c4
+LDU 64 ; pubkey timestamp c4
+LDU 1 ; ctor flag
+NIP
+LDU 8
+LDI 1
+SWAP
+PUSHCONT {
+	LDREF
+}
+PUSHCONT {
+	NULL
+	SWAP
+}
+IFELSE
+LDI 1
+SWAP
+PUSHCONT {
+	LDREF
+}
+PUSHCONT {
+	NULL
+	SWAP
+}
+IFELSE
+LDI 1
+SWAP
+PUSHCONT {
+	LDMSGADDR
+}
+PUSHCONT {
+	NULL
+	SWAP
+}
+IFELSE
+ENDS
+SETGLOB 13
+SETGLOB 12
+SETGLOB 11
+SETGLOB 10
+SETGLOB 3
+SETGLOB 2
+
+.macro c4_to_c7_with_init_storage
+PUSHROOT
+CTOS
+SBITS
+GTINT 1
+PUSHCONT {
+	PUSHINT 0
+	PUSHROOT
+	CTOS
+	PLDDICT ; D
+	PUSHINT 0
+	SETGLOB 10
+	NULL
+	SETGLOB 11
+	NULL
+	SETGLOB 12
+	NULL
+	SETGLOB 13
+	PUSHINT 64
+	DICTUGET
+	THROWIFNOT 61
+	PLDU 256
+	SETGLOB 2
+	PUSHINT 0 ; timestamp
+	SETGLOB 3
+}
+IFREFELSE {
+	CALL $c4_to_c7$
+}
+
+.macro c7_to_c4
+GETGLOB 13
+GETGLOB 12
+GETGLOB 11
+GETGLOB 10
+GETGLOB 3
+GETGLOB 2
+NEWC
+STU 256
+STU 64
+STONE
+STU 8
+SWAP
+DUP
+ISNULL
+PUSHCONT {
+	DROP
+	STSLICECONST 0
+}
+PUSHCONT {
+	SWAP
+	STSLICECONST 1
+	STREF
+}
+IFELSE
+SWAP
+DUP
+ISNULL
+PUSHCONT {
+	DROP
+	STSLICECONST 0
+}
+PUSHCONT {
+	SWAP
+	STSLICECONST 1
+	STREF
+}
+IFELSE
+SWAP
+DUP
+ISNULL
+PUSHCONT {
+	DROP
+	STSLICECONST 0
+}
+PUSHCONT {
+	SWAP
+	STSLICECONST 1
+	STSLICE
+}
+IFELSE
+ENDC
+POPROOT
+
+.macro upd_only_time_in_c4
+PUSHROOT
+CTOS
+LDU 256
+LDU 64
+NIP
+GETGLOB 3
+ROT
+NEWC
+STU 256
+STU 64
+STSLICE
+ENDC
+POPROOT
+
+.internal-alias :main_internal, 0
+.internal :main_internal
+PUSHROOT
+CTOS
+SBITS
+NEQINT 1
+SETGLOB 6
+PUSH S2
+CTOS
+PLDU 4
+MODPOW2 1
+IFRET
+OVER
+SEMPTY ; isEmpty
+IFJMPREF {
+	GETGLOB 6
+	THROWIFNOT 76
+}
+OVER
+LDUQ 32  ; [funcId] body' ok
+THROWIFNOT 60
+OVER
+IFNOTJMPREF {
+	GETGLOB 6
+	THROWIFNOT 76
+}
+SWAP
+CALLREF {
+	CALL $public_function_selector$
+}
+THROW 60
+
+.internal-alias :main_external, -1
+.internal :main_external
+PUSHROOT
+CTOS
+SBITS
+NEQINT 1
+SETGLOB 6
+OVER
+CALLREF {
+	CALL $c4_to_c7_with_init_storage$
+}
+LDU 1 ; haveSign msgSlice
+SWAP
+PUSHCONT {
+	PUSHINT 512
+	LDSLICEX ; signatureSlice msgSlice
+	DUP
+	HASHSU ; signatureSlice msgSlice hashMsgSlice
+	SWAP
+	LDU 1 ; signatureSlice hashMsgSlice havePubkey msgSlice
+	SWAP
+	PUSHCONT {
+		LDU 256 ; signatureSlice hashMsgSlice pubkey msgSlice
+		XCHG S3
+		SWAP
+	}
+	PUSHCONT {
+		XCHG S2
+		GETGLOB 2
+	}
+	IFELSE
+	DUP
+	SETGLOB 5
+	CHKSIGNU ; msgSlice isSigned
+	THROWIFNOT 40
+}
+PUSHCONT {
+	LDU 1 ; havePubkey msgSlice
+	SWAP
+	THROWIF 58
+}
+IFELSE
+LDU 64 ; timestamp msgSlice
+SWAP
+CALL $replay_protection_macro$
+LDU 32 ; expireAt msgSlice
+SWAP
+NOW ; msgSlice expireAt now
+GREATER ; msgSlice expireAt>now
+THROWIFNOT 57
+LDU 32 ; funcId body
+SWAP
+CALLREF {
+	CALL $public_function_selector$
+}
+THROW 60
+
+.globl	Terminal_with_obj_print
+.type	Terminal_with_obj_print, @function
+CALL $Terminal_with_obj_print_macro$
+
+.macro Terminal_with_obj_print_macro
+.loc .solc_imports/Terminal.sol, 23
+OVER
+PUSHSLICE x6270c3cb29b1b37710c296dab6e65b05e2b22cc5b0c6432fe286458d5ba05dd094719cc4b400000000000000000000000000006367cbed
+NEWC
+STSLICE
+STU 32
+STREF
+ENDC
+PUSHINT 0
+SENDRAWMSG
+.loc .solc_imports/Terminal.sol, 0
+
+.globl	Terminal_no_obj_print
+.type	Terminal_no_obj_print, @function
+CALL $Terminal_no_obj_print_macro$
+
+.macro Terminal_no_obj_print_macro
+.loc .solc_imports/Terminal.sol, 23
+SWAP
+PUSHSLICE x6270c3cb29b1b37710c296dab6e65b05e2b22cc5b0c6432fe286458d5ba05dd094719cc4b400000000000000000000000000006367cbed
+NEWC
+STSLICE
+STU 32
+STREF
+ENDC
+PUSHINT 0
+SENDRAWMSG
+.loc .solc_imports/Terminal.sol, 0
+
+.globl	Terminal_with_obj_input
+.type	Terminal_with_obj_input, @function
+CALL $Terminal_with_obj_input_macro$
+
+.macro Terminal_with_obj_input_macro
+.loc .solc_imports/Terminal.sol, 18
+SWAP
+PUSH S2
+PUSHSLICE x6270c3cb29b1b37710c296dab6e65b05e2b22cc5b0c6432fe286458d5ba05dd094719cc4b400000000000000000000000000003a85fb37
+NEWC
+STSLICE
+STU 32
+STREF
+STI 1
+ENDC
+PUSHINT 0
+SENDRAWMSG
+.loc .solc_imports/Terminal.sol, 0
+
+.globl	Terminal_no_obj_input
+.type	Terminal_no_obj_input, @function
+CALL $Terminal_no_obj_input_macro$
+
+.macro Terminal_no_obj_input_macro
+.loc .solc_imports/Terminal.sol, 18
+XCHG S2
+PUSHSLICE x6270c3cb29b1b37710c296dab6e65b05e2b22cc5b0c6432fe286458d5ba05dd094719cc4b400000000000000000000000000003a85fb37
+NEWC
+STSLICE
+STU 32
+STREF
+STI 1
+ENDC
+PUSHINT 0
+SENDRAWMSG
+.loc .solc_imports/Terminal.sol, 0
+
+.macro public_function_selector
+DUP
+PUSHINT 576299786
+LEQ
+IFJMPREF {
+	DUP
+	PUSHINT 3563
+	EQUAL
+	IFJMPREF {
+		CALL $getDebotInfo$
+	}
+	DUP
+	PUSHINT 94113135
+	EQUAL
+	IFJMPREF {
+		CALL $start$
+	}
+	DUP
+	PUSHINT 235440503
+	EQUAL
+	IFJMPREF {
+		CALL $setABI$
+	}
+	DUP
+	PUSHINT 576299786
+	EQUAL
+	IFJMPREF {
+		CALL $getDebotOptions$
+	}
+}
+DUP
+PUSHINT 1756716863
+LEQ
+IFJMPREF {
+	DUP
+	PUSHINT 645710353
+	EQUAL
+	IFJMPREF {
+		CALL $setUserInput$
+	}
+	DUP
+	PUSHINT 1482960138
+	EQUAL
+	IFJMPREF {
+		CALL $getRequiredInterfaces$
+	}
+	DUP
+	PUSHINT 1756716863
+	EQUAL
+	IFJMPREF {
+		CALL $constructor$
+	}
+}
+

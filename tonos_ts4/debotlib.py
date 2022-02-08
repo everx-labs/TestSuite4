@@ -1,3 +1,12 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
 from tonos_ts4 import ts4
 eq = ts4.eq
 
@@ -10,7 +19,7 @@ def load_debot(filename, nickname):
 class Terminal(ts4.BaseContract):
     def __init__(self):
         addr = ts4.Address('-31:8796536366ee21852db56dccb60bc564598b618c865fc50c8b1ab740bba128e3')
-        super(Terminal, self).__init__('common/TerminalImpl', {}, nickname = 'term', override_address = addr)
+        super(Terminal, self).__init__('debots:TerminalImpl', {}, nickname = 'term', override_address = addr)
 
     def expect_print(self, txt):
         msg = ts4.pop_event()
@@ -25,11 +34,11 @@ class Terminal(ts4.BaseContract):
         # print(msg)
         assert msg.is_event('Input', src = self.addr)
         e = self.decode_event(msg)
-        ts4.verbose_(e.prompt)
         assert eq(txt, e.prompt)
         return e.answerId
 
     def expect_input2(self, txt, answer):
+        print('{}: {}'.format(ts4.red(txt), ts4.yellow(answer)))
         answerId = self.expect_input(txt)
         self.send_input(answerId, answer)
 
@@ -44,7 +53,7 @@ class Terminal(ts4.BaseContract):
 class ConfirmInput(ts4.BaseContract):
     def __init__(self):
         addr = ts4.Address('-31:16653eaf34c921467120f2685d425ff963db5cbb5aa676a62a2e33bfc3f6828a')
-        super(ConfirmInput, self).__init__('common/ConfirmInputImpl', {}, nickname = 'confirmInput', override_address = addr)
+        super(ConfirmInput, self).__init__('debots:ConfirmInputImpl', {}, nickname = 'confirmInput', override_address = addr)
 
     def expect(self, prompt, answer):
         assert eq(prompt, self.call_getter('m_prompt'))
@@ -53,7 +62,7 @@ class ConfirmInput(ts4.BaseContract):
 class AddressInput(ts4.BaseContract):
     def __init__(self):
         addr = ts4.Address('-31:d7ed1bd8e6230871116f4522e58df0a93c5520c56f4ade23ef3d8919a984653b')
-        super(AddressInput, self).__init__('common/AddressInputImpl', {}, nickname = 'addrInp', override_address = addr)
+        super(AddressInput, self).__init__('debots:AddressInputImpl', {}, nickname = 'addrInp', override_address = addr)
 
     def expect_get(self, prompt):
         msg = ts4.pop_event()
@@ -75,7 +84,7 @@ class AddressInput(ts4.BaseContract):
 class DebotMenu(ts4.BaseContract):
     def __init__(self):
         addr = ts4.Address('-31:ac1a4d3ecea232e49783df4a23a81823cdca3205dc58cd20c4db259c25605b48')
-        super(DebotMenu, self).__init__('common/MenuImpl', {}, nickname = 'menu', override_address = addr)
+        super(DebotMenu, self).__init__('debots:MenuImpl', {}, nickname = 'menu', override_address = addr)
 
     def expect_menu(self, title):
         self.title = self.call_getter('m_title')
@@ -83,13 +92,13 @@ class DebotMenu(ts4.BaseContract):
         self.description = self.call_getter('m_description')
         self.items = self.call_getter('m_items', decode = True)
         
-        print('MENU:', self.title)
-        print('MENU:', self.description)
+        print('MENU:', ts4.white(self.title))
+        print('MENU:', ts4.white(self.description))
         for item in self.items:
-            print('MENU:', item.__raw__)
+            print('MENU:', ts4.green(item.__raw__))
 
     def select(self, title):
-        print('Selecting:', title)
+        print('Selecting:', ts4.yellow(title))
         for index, item in enumerate(self.items):
             if item.title == title:
                 self.call_method('reply_select', dict(index = index))
@@ -143,6 +152,7 @@ class DebotContext():
         ts4.core.set_debot_keypair(secret, pubkey)
 
     def expect_menu(self, title, select):
+        self.expect_print(None)
         if self.auto_dispatch: 
             self.dispatch_messages()
         self.menu.expect_menu(title)
@@ -151,6 +161,7 @@ class DebotContext():
             self.dispatch_messages()
 
     def expect_address_input(self, title, reply):
+        self.expect_print(None)
         if self.auto_dispatch: 
             self.dispatch_messages()
         answerId = self.addrInp.expect_get(title)
@@ -159,6 +170,7 @@ class DebotContext():
             self.dispatch_messages()
 
     def expect_input(self, txt, answer):
+        self.expect_print(None)
         if self.auto_dispatch: 
             self.dispatch_messages()
         self.term.expect_input2(txt, answer)
@@ -166,6 +178,8 @@ class DebotContext():
             self.dispatch_messages()
 
     def expect_confirmInput(self, txt, answer):
+        print('{}: {}'.format(ts4.red(txt), ts4.yellow('YES' if answer else 'NO')))
+        self.expect_print(None)
         if self.auto_dispatch: 
             self.dispatch_messages()
         self.confirmInput.expect(txt, answer)
@@ -173,10 +187,15 @@ class DebotContext():
             self.dispatch_messages()
 
     def expect_print(self, msg):
+        # print('expect: {}, size = {}'.format(ts4.yellow(msg), len(self._prints)))
         while len(self._prints) > 0:
             t = self._prints.pop(0)
-            if msg in t:
-                return
-        assert False, "msg = {}".format(msg)
+            # print('print:', ts4.yellow(t))
+            if msg is not None:
+                if msg in t:
+                    return
+        if msg is None:
+            return
+        assert False, "Expected print not found! "+ ts4.red("{}".format(msg))
 
 

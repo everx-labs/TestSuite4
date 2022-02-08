@@ -1,3 +1,12 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
 import json
 
 from . import globals
@@ -321,11 +330,14 @@ class Params:
                 setattr(self, key, value)
 
     @staticmethod
-    def stringify(d):
+    def stringify(d, max_str_len = 67):
         arr = []
         for k, v in d.items():
             if isinstance(v, dict):
                 arr.append(f'{(k)}: {{{Params.stringify(v)}}}')
+            if isinstance(v, str):
+                v  = v if len(v) <= max_str_len else v[:max_str_len] + '...'
+                arr.append(f'{(k)}: {(v)}')
             else:
                 arr.append(f'{(k)}: {(v)}')
 
@@ -352,15 +364,6 @@ def make_params(data):
     return data
 
 
-class ExecutionResult:
-    def __init__(self, result):
-        (ec, actions, gas, err, debot_answer_msg) = result
-        self.exit_code  = ec
-        self.actions    = actions
-        self.gas_used   = gas
-        self.error      = err
-        self.debot_answer_msg = debot_answer_msg
-
 def prettify_dict(d, max_str_len = 67):
     nd = {}
     for k, v in d.items():
@@ -370,6 +373,8 @@ def prettify_dict(d, max_str_len = 67):
             nd[k] = v if len(v) <= max_str_len else v[:max_str_len] + '...'
         elif isinstance(v, Address):
             nd[k] = ts4.format_addr(v, compact = False)
+        elif isinstance(v, Cell):
+            nd[k] = v.short_raw()
         else:
             nd[k] = v
 

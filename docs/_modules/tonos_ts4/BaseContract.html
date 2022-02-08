@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.BaseContract - TestSuite4 v0.5.0a1</title>
+        <title>tonos_ts4.BaseContract - TestSuite4 v0.5.0a2</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a1</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a2</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.5.0a1</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.5.0a2</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -136,14 +136,25 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for tonos_ts4.BaseContract</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">    This file is part of Ever OS.</span>
+
+<span class="sd">    Ever OS is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)</span>
+
+<span class="sd">    Copyright 2019-2022 (c) TON LABS</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="nb">globals</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">ts4</span>
 
 <span class="kn">from</span> <span class="nn">.address</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">.abi</span>     <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.dump</span>    <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">.global_functions</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.core</span>    <span class="kn">import</span> <span class="n">ExecutionResult</span>
 
 <span class="k">def</span> <span class="nf">_build_params_dict</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">):</span>
@@ -173,7 +184,6 @@
         <span class="k">for</span> <span class="n">rec</span> <span class="ow">in</span> <span class="n">abi</span><span class="o">.</span><span class="n">json</span><span class="p">[</span><span class="s1">'functions'</span><span class="p">]:</span>
             <span class="n">method</span> <span class="o">=</span> <span class="n">rec</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span>
             <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">_build_getter_wrapper</span><span class="p">(</span><span class="n">contract</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">rec</span><span class="p">[</span><span class="s1">'inputs'</span><span class="p">],</span> <span class="n">mode</span><span class="p">))</span>
-
 
 <div class="viewcode-block" id="BaseContract"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.BaseContract">[docs]</a><span class="k">class</span> <span class="nc">BaseContract</span><span class="p">:</span>
     <span class="sd">"""The :class:`BaseContract &lt;BaseContract&gt;` object, which is responsible</span>
@@ -210,6 +220,8 @@
 <span class="sd">        :param num balance: Desired contract balance</span>
 <span class="sd">        :param str nickname: Nickname of the contract used in verbose output</span>
 <span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">'debots:'</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'debots:'</span><span class="p">,</span> <span class="s1">'debots/'</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_</span> <span class="o">=</span> <span class="n">name</span>
         <span class="n">full_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">globals</span><span class="o">.</span><span class="n">G_TESTS_PATH</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
         <span class="n">just_deployed</span> <span class="o">=</span> <span class="kc">False</span>
@@ -225,47 +237,42 @@
         <span class="n">balance</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">balance</span><span class="p">,</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_DEFAULT_BALANCE</span><span class="p">)</span>
 
         <span class="c1"># Load ABI</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">abi</span> <span class="o">=</span> <span class="n">Abi</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">abi</span> <span class="o">=</span> <span class="n">Abi</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">exception</span> <span class="o">=</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exception</span>
 
         <span class="k">if</span> <span class="n">address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">blue</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Deploying </span><span class="si">{</span><span class="n">full_name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">p_n</span><span class="si">}</span><span class="s1">'</span><span class="p">))</span>
 
-            <span class="n">error_msg</span> <span class="o">=</span> <span class="kc">None</span>
-
+            <span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">ctor_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">ctor_params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="s1">'constructor'</span><span class="p">,</span> <span class="n">ctor_params</span><span class="p">)</span>
-
                 <span class="k">if</span> <span class="n">initial_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">initial_data</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="s1">'.data'</span><span class="p">,</span> <span class="n">initial_data</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-                <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">error_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+                <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">translate_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exception</span>
+
 
             <span class="k">if</span> <span class="n">pubkey</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="n">pubkey</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'0x'</span>
                 <span class="n">pubkey</span> <span class="o">=</span> <span class="n">pubkey</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'0x'</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">address</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">deploy_contract</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">tvc_path</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">abi_path</span><span class="p">,</span>
-                    <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">ctor_params</span><span class="p">)</span>  <span class="k">if</span> <span class="n">ctor_params</span>  <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-                    <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">initial_data</span><span class="p">)</span> <span class="k">if</span> <span class="n">initial_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-                    <span class="n">pubkey</span><span class="p">,</span>
-                    <span class="n">private_key</span><span class="p">,</span>
-                    <span class="n">wc</span><span class="p">,</span>
-                    <span class="n">override_address</span><span class="p">,</span>
-                    <span class="n">balance</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="n">address</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">deploy_contract_ext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctor_params</span><span class="p">,</span> <span class="n">initial_data</span><span class="p">,</span> <span class="n">pubkey</span><span class="p">,</span> <span class="n">private_key</span><span class="p">,</span> <span class="n">wc</span><span class="p">,</span> <span class="n">override_address</span><span class="p">,</span> <span class="n">balance</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
                 <span class="n">tvm_err_msg</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">get_last_error_msg</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">tvm_err_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">ts4</span><span class="o">.</span><span class="n">verbose_</span><span class="p">(</span><span class="n">tvm_err_msg</span><span class="p">)</span>
-                <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">error_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+                <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exception</span>
             <span class="n">address</span> <span class="o">=</span> <span class="n">Address</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
             <span class="n">just_deployed</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init2</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">just_deployed</span> <span class="o">=</span> <span class="n">just_deployed</span><span class="p">)</span>
@@ -360,16 +367,11 @@
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params</span><span class="p">,</span>    <span class="nb">dict</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expect_ec</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
 
-        <span class="n">result</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">call_contract</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span>
-            <span class="n">method</span><span class="p">,</span>
-            <span class="kc">True</span><span class="p">,</span>   <span class="c1"># is_getter</span>
-            <span class="kc">False</span><span class="p">,</span>  <span class="c1"># is_debot</span>
-            <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">params</span><span class="p">),</span>
-            <span class="kc">None</span><span class="p">,</span>   <span class="c1"># private_key</span>
-        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">call_contract_ext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">is_getter</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
 
-        <span class="n">result</span> <span class="o">=</span> <span class="n">ExecutionResult</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'accept_in_getter'</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_WARN_ON_ACCEPT_IN_GETTER</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">yellow</span><span class="p">(</span><span class="s1">'WARNING! Accept in getter!'</span><span class="p">))</span>
+
         <span class="k">assert</span> <span class="n">eq</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">error</span><span class="p">)</span>
         <span class="c1"># print(actions)</span>
 
@@ -383,6 +385,9 @@
         <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">actions</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">msg</span><span class="o">.</span><span class="n">is_answer</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="s2">"Unexpected message type '</span><span class="si">{}</span><span class="s2">' in getter output"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">type</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="s2">"Getter '</span><span class="si">{}</span><span class="s2">' returns no answer"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span>
 
         <span class="k">assert</span> <span class="n">eq</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">actions</span><span class="p">)),</span> <span class="s1">'len(actions) == 1'</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="n">Msg</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">actions</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
@@ -415,21 +420,24 @@
 <span class="sd">        :return: A returned value in decoded form (exact type depends on the type of getter)</span>
 <span class="sd">        :rtype: type</span>
 <span class="sd">        """</span>
-        <span class="n">error_msg</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_getter_raw</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">expect_ec</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-            <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">error_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+            <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">translate_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exception</span>
 
         <span class="k">if</span> <span class="n">expect_ec</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="c1"># TODO: ensure values is empty?</span>
             <span class="k">return</span>
 
+        <span class="n">decoder</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">decoder</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span><span class="o">.</span><span class="n">fill_nones</span><span class="p">(</span><span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">decode_ints</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">deprecated_msg</span> <span class="o">=</span> <span class="s2">"Parameter is deprecated. Use `decoder = ts4.Decoder(ints = </span><span class="si">{}</span><span class="s2">)` instead."</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">decode_ints</span><span class="p">)</span>
-            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="n">red</span><span class="p">(</span><span class="n">deprecated_msg</span><span class="p">)</span>
+            <span class="n">decoder</span><span class="o">.</span><span class="n">ints</span> <span class="o">=</span> <span class="n">decode_ints</span>
+            <span class="c1"># deprecated_msg = "Parameter is deprecated. Use `decoder = ts4.Decoder(ints = {})` instead.".format(decode_ints)</span>
+            <span class="c1"># assert False, red(deprecated_msg)</span>
 
         <span class="k">if</span> <span class="n">decode_tuples</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">deprecated_msg</span> <span class="o">=</span> <span class="s2">"Parameter is deprecated. Use `decoder = ts4.Decoder(tuples = </span><span class="si">{}</span><span class="s2">)` instead."</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">decode_tuples</span><span class="p">)</span>
@@ -439,7 +447,6 @@
             <span class="n">deprecated_msg</span> <span class="o">=</span> <span class="s2">"Parameter is deprecated. Use `decoder = ts4.Decoder(skip_fields = ...)` instead."</span>
             <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="n">red</span><span class="p">(</span><span class="n">deprecated_msg</span><span class="p">)</span>
 
-        <span class="n">decoder</span> <span class="o">=</span> <span class="n">either_or</span><span class="p">(</span><span class="n">decoder</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span><span class="o">.</span><span class="n">fill_nones</span><span class="p">(</span><span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span>
 
         <span class="c1"># print('values =', values)</span>
         <span class="n">answer</span> <span class="o">=</span> <span class="n">decode_contract_answer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
@@ -486,33 +493,25 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expect_ec</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
             <span class="n">expect_ec</span> <span class="o">=</span> <span class="p">[</span><span class="n">expect_ec</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">blue</span><span class="p">(</span><span class="s1">'&gt; ext_in_msg'</span><span class="p">)</span> <span class="o">+</span> <span class="n">grey</span><span class="p">(</span><span class="s1">': '</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s1">''</span><span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">cyan</span><span class="p">(</span><span class="s1">'    '</span><span class="p">),</span> <span class="n">grey</span><span class="p">(</span><span class="s1">'-&gt;'</span><span class="p">),</span> <span class="n">bright_cyan</span><span class="p">(</span><span class="n">format_addr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="p">)))</span>
-            <span class="nb">print</span><span class="p">(</span><span class="n">cyan</span><span class="p">(</span><span class="n">grey</span><span class="p">(</span><span class="s1">'    method: '</span><span class="p">)</span> <span class="o">+</span> <span class="n">bright_cyan</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span>
-            <span class="o">+</span> <span class="n">grey</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">    params: '</span><span class="p">)</span> <span class="o">+</span> <span class="n">cyan</span><span class="p">(</span><span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Params</span><span class="o">.</span><span class="n">stringify</span><span class="p">(</span><span class="n">prettify_dict</span><span class="p">(</span><span class="n">params</span><span class="p">)))))</span> <span class="o">+</span> <span class="s1">'</span><span class="se">\n</span><span class="s1">'</span><span class="p">)</span>
+            <span class="n">print_ext_in_msg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
-        <span class="n">error_msg</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">params</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">check_method_params</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-            <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">error_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+            <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">translate_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exception</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">call_contract</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span>
-                <span class="n">method</span><span class="p">,</span>
-                <span class="kc">False</span><span class="p">,</span> <span class="c1"># is_getter</span>
-                <span class="n">is_debot</span><span class="p">,</span>
-                <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">params</span><span class="p">),</span>
-                <span class="n">private_key</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">ExecutionResult</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">call_contract_ext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">addr</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">is_debot</span> <span class="o">=</span> <span class="n">is_debot</span><span class="p">,</span> <span class="n">private_key</span> <span class="o">=</span> <span class="n">private_key</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">())</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s2">"Exception when calling '</span><span class="si">{}</span><span class="s2">' with params </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">json_dumps</span><span class="p">(</span><span class="n">params</span><span class="p">)))</span>
-            <span class="k">raise</span>
+            <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">exception</span>
 
         <span class="nb">globals</span><span class="o">.</span><span class="n">G_LAST_GAS_USED</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">gas_used</span>
 
@@ -535,19 +534,25 @@
                 <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">red</span><span class="p">(</span><span class="n">err_msg</span><span class="p">))</span>
             <span class="n">verbose_</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">error_msg</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">exception</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">_gas</span><span class="p">,</span> <span class="n">answer</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">process_actions</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">expect_ec</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-                <span class="n">error_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">error_msg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">ts4</span><span class="o">.</span><span class="n">BaseException</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+                <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">translate_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exception</span>
             <span class="k">if</span> <span class="n">answer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="n">answer</span><span class="o">.</span><span class="n">is_answer</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
                 <span class="n">key</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="n">decoded_answer</span> <span class="o">=</span> <span class="n">decode_contract_answer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abi</span><span class="p">,</span> <span class="n">answer</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decoder</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_AUTODISPATCH</span><span class="p">:</span>
-                <span class="n">ts4</span><span class="o">.</span><span class="n">dispatch_messages</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">ts4</span><span class="o">.</span><span class="n">dispatch_messages</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="n">exception</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">translate_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">exception</span>
+
             <span class="k">if</span> <span class="n">answer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">decoded_answer</span></div>
 
@@ -573,8 +578,7 @@
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">globals</span><span class="o">.</span><span class="n">G_VERBOSE</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">'ticktock </span><span class="si">{}</span><span class="s1">'</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">format_addr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">)))</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="nb">globals</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">call_ticktock</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">str</span><span class="p">(),</span> <span class="n">is_tock</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">ExecutionResult</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">call_ticktock_ext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">is_tock</span><span class="p">)</span>
         <span class="n">gas</span><span class="p">,</span> <span class="n">answer</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">process_actions</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">answer</span> <span class="ow">is</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">gas</span></div>
@@ -603,7 +607,10 @@
     <span class="n">res_dict</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">res_arr</span>  <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="nb">type</span> <span class="ow">in</span> <span class="n">types</span><span class="p">:</span>
-        <span class="n">value</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="nb">type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">decoder</span><span class="o">.</span><span class="n">skip_fields</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="nb">type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
         <span class="n">res_dict</span><span class="p">[</span><span class="nb">type</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
         <span class="n">res_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">decoder</span><span class="o">.</span><span class="n">tuples</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
@@ -616,7 +623,7 @@
     <span class="n">values</span><span class="p">,</span>
     <span class="n">method</span><span class="p">,</span>
     <span class="n">key</span><span class="p">,</span>
-    <span class="n">params</span><span class="p">,</span>
+    <span class="n">decoder</span><span class="p">,</span>
 <span class="p">):</span>
     <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 
@@ -624,7 +631,7 @@
         <span class="n">key</span> <span class="o">=</span> <span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_make_tuple_result</span><span class="p">(</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_make_tuple_result</span><span class="p">(</span><span class="n">abi</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
 
     <span class="k">assert</span> <span class="n">key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="k">assert</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">values</span><span class="p">,</span> <span class="n">red</span><span class="p">(</span><span class="s2">"No '</span><span class="si">{}</span><span class="s2">' in </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">values</span><span class="p">))</span>
@@ -632,7 +639,7 @@
     <span class="n">value</span>     <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
     <span class="n">abi_type</span>  <span class="o">=</span> <span class="n">abi</span><span class="o">.</span><span class="n">find_getter_output_type</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">abi_type</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">decode_json_value</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">abi_type</span><span class="p">,</span> <span class="n">decoder</span><span class="p">)</span>
 
 </pre></div>
       </article>

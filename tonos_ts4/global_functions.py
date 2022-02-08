@@ -1,3 +1,12 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
 import os
 import base64
 import hashlib
@@ -288,7 +297,6 @@ def make_path(name, ext):
             fn += ext
     return fn
 
-# TODO: Shouldn't this function return Cell?
 def load_tvc(fn):
     """Loads a compiled contract image (`.tvc`) with a given name.
 
@@ -390,8 +398,18 @@ def encode_message_body(abi_name, method, params):
     )
     return Cell(encoded)
 
-# TODO: finalize and add docs
 def build_int_msg(src, dst, abi_file, method, params, value):
+    """Creates an internal message representing the given call.
+
+    :param Address src: Source address
+    :param Address dst: Destination address
+    :param Address abi_file: The name of the destination contract whose ABI should be used for encoding message
+    :param str method: A name of the encoded method
+    :param dict params: A dictionary with parameters for the encoded method
+    :param num value: Desired message value
+    :return: Msg object containing encoded message
+    :rtype: Msg
+    """
     assert isinstance(src, Address)
     assert isinstance(dst, Address)
 
@@ -406,6 +424,11 @@ def build_int_msg(src, dst, abi_file, method, params, value):
     return msg
 
 def last_gas():
+    """Returns the gas used in the last contract execution.
+
+    :return: gas used in the last contract execution
+    :rtype: num
+    """
     return ts4.globals.G_LAST_GAS_USED
 
 def set_config_param(index, value):

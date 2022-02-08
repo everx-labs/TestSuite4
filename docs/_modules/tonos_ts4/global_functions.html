@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" />
 
     <meta name="generator" content="sphinx-3.5.2, furo 2021.03.20.beta30"/>
-        <title>tonos_ts4.global_functions - TestSuite4 v0.5.0a1</title>
+        <title>tonos_ts4.global_functions - TestSuite4 v0.5.0a2</title>
       <link rel="stylesheet" href="../../_static/styles/furo.css?digest=978e1795dfe158b585dda6a8417f6411828bf3ed">
     <link rel="stylesheet" href="../../_static/pygments.css">
     <link media="(prefers-color-scheme: dark)" rel="stylesheet" href="../../_static/pygments_dark.css">
@@ -88,7 +88,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a1</div></a>
+      <a href="../../index.html"><div class="brand">TestSuite4 v0.5.0a2</div></a>
     </div>
     <div class="header-right">
       <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
@@ -106,7 +106,7 @@
     <img class="sidebar-logo only-dark" src="../../_static/ts4-logo-colored.svg" alt="Dark Logo B"/>
   </div>
   
-  <span class="sidebar-brand-text">TestSuite4 v0.5.0a1</span>
+  <span class="sidebar-brand-text">TestSuite4 v0.5.0a2</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html">
   <input class="sidebar-search" placeholder=Search name="q">
@@ -136,7 +136,16 @@
           <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
         </label>
         <h1>Source code for tonos_ts4.global_functions</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span></span><span class="sd">"""</span>
+<span class="sd">    This file is part of Ever OS.</span>
+
+<span class="sd">    Ever OS is free software: you can redistribute it and/or modify</span>
+<span class="sd">    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)</span>
+
+<span class="sd">    Copyright 2019-2022 (c) TON LABS</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">base64</span>
 <span class="kn">import</span> <span class="nn">hashlib</span>
 
@@ -426,7 +435,6 @@
             <span class="n">fn</span> <span class="o">+=</span> <span class="n">ext</span>
     <span class="k">return</span> <span class="n">fn</span>
 
-<span class="c1"># TODO: Shouldn't this function return Cell?</span>
 <div class="viewcode-block" id="load_tvc"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.load_tvc">[docs]</a><span class="k">def</span> <span class="nf">load_tvc</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
     <span class="sd">"""Loads a compiled contract image (`.tvc`) with a given name.</span>
 
@@ -528,8 +536,18 @@
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">Cell</span><span class="p">(</span><span class="n">encoded</span><span class="p">)</span>
 
-<span class="c1"># TODO: finalize and add docs</span>
 <span class="k">def</span> <span class="nf">build_int_msg</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">abi_file</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">"""Creates an internal message representing the given call.</span>
+
+<span class="sd">    :param Address src: Source address</span>
+<span class="sd">    :param Address dst: Destination address</span>
+<span class="sd">    :param Address abi_file: The name of the destination contract whose ABI should be used for encoding message</span>
+<span class="sd">    :param str method: A name of the encoded method</span>
+<span class="sd">    :param dict params: A dictionary with parameters for the encoded method</span>
+<span class="sd">    :param num value: Desired message value</span>
+<span class="sd">    :return: Msg object containing encoded message</span>
+<span class="sd">    :rtype: Msg</span>
+<span class="sd">    """</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">Address</span><span class="p">)</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="n">Address</span><span class="p">)</span>
 
@@ -544,6 +562,11 @@
     <span class="k">return</span> <span class="n">msg</span>
 
 <span class="k">def</span> <span class="nf">last_gas</span><span class="p">():</span>
+    <span class="sd">"""Returns the gas used in the last contract execution.</span>
+
+<span class="sd">    :return: gas used in the last contract execution</span>
+<span class="sd">    :rtype: num</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">ts4</span><span class="o">.</span><span class="n">globals</span><span class="o">.</span><span class="n">G_LAST_GAS_USED</span>
 
 <div class="viewcode-block" id="set_config_param"><a class="viewcode-back" href="../../ts4.html#tonos_ts4.ts4.set_config_param">[docs]</a><span class="k">def</span> <span class="nf">set_config_param</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>

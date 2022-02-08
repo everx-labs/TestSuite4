@@ -1,3 +1,14 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
+import os
+
 from .util import *
 from .address import *
 from .abi import *
@@ -56,10 +67,16 @@ def dump_all_messages():
             print('--------------- {} ------------ ------------ ------------'
                 .format(colorize(BColors.BOLD, str(cur_time))))
             prev_time = cur_time
-        dump_message(msg)
+        print_int_msg(msg)
 
 
-def dump_message(msg: Msg):
+def print_ext_in_msg(addr, method, params):
+    print(blue('> ext_in_msg') + grey(': '), end='')
+    print(cyan('    '), grey('->'), bright_cyan(format_addr(addr)))
+    print(cyan(grey('    method: ') + bright_cyan('{}'.format(method))
+    + grey('\n    params: ') + cyan('{}'.format(Params.stringify(prettify_dict(params))))) + '\n')
+
+def print_int_msg(msg: Msg):
     assert isinstance(msg, Msg)
     value = msg.value / GRAM if msg.value is not None else 'n/a'
     #print(msg)
@@ -69,8 +86,9 @@ def dump_message(msg: Msg):
     if msg.is_type('call',  'empty', 'bounced'):
         # ttt = "{}".format(msg)
         if msg.is_call():
+            # print(msg)
             ttt = bright_cyan(msg.method) + grey('\n    params: ') + cyan(Params.stringify(msg.params) + '\n')
-            ttt = grey('    method:') + ttt
+            ttt = grey('    method: ') + ttt
         elif msg.is_bounced():
             msg_type = yellow(' <bounced>')
         elif msg.is_type('empty') and value > 0:
@@ -110,10 +128,16 @@ def dump_message(msg: Msg):
 
 #########################################################################################################
 
-def dump_js_data():
+def dump_js_data(path = '.'):
+    fn = os.path.join(path, 'msg_data.js')
     all_runs = get_all_runs()
     msgs = get_all_messages()
-    with open('msg_data.js', 'w') as f:
+    def truncate_long_strings(msg):
+        if msg['params'] is not None:
+            msg['params'] = prettify_dict(msg['params'])
+        return msg
+    msgs = [truncate_long_strings(msg) for msg in msgs]
+    with open(fn, 'w') as f:
         print('var allMessages = ' + dump_struct_str(msgs) + ';', file = f)
         print('var nicknames = ' + dump_struct_str(globals.NICKNAMES) + ';', file = f)
         print('var allRuns = ' + dump_struct_str(all_runs) + ';', file = f)

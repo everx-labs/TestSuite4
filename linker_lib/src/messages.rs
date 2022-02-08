@@ -234,6 +234,10 @@ impl CallContractMsgInfo {      // TODO: move to call_contract.rs
         self.id.clone()
     }
 
+    pub fn set_id(&mut self, id: u32) {
+        self.id = Some(id);
+    }
+
     pub fn ton_msg(&self) -> Option<&TonBlockMessage> {
         self.ton_msg.as_ref()
     }

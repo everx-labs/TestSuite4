@@ -1,3 +1,12 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
 import sys
 import re
 import binascii
@@ -110,6 +119,14 @@ def eq(v1, v2, dismiss = False, msg = None, xtra = ''):
         return True if dismiss else False
 
 def leq(v1, v2):
+    """Helper function to check that one value is less or equal than enother.
+    Prints the message in case of mismatch.
+
+    :param Any v1: First value
+    :param Any v2: Second value
+    :return: Result of check
+    :rtype: bool
+    """
     if v1 <= v2:
         return True
     print(red('expected {} <= {}'.format(v1, v2)))
