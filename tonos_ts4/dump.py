@@ -142,3 +142,20 @@ def dump_js_data(path = '.'):
         print('var nicknames = ' + dump_struct_str(globals.NICKNAMES) + ';', file = f)
         print('var allRuns = ' + dump_struct_str(all_runs) + ';', file = f)
 
+def dump_json_data(path = '.', fp=None):
+    fn = os.path.join(path, 'msg_data.json')
+    all_runs = get_all_runs()
+    msgs = get_all_messages()
+    if fp:
+        json.dump({
+            'allMessages': msgs,
+            'nicknames': globals.NICKNAMES,
+            'allRuns': all_runs,
+        }, indent=2, fp=fp)
+    else:
+        with open(fn, 'w') as fp:
+            json.dump({
+                'allMessages': msgs,
+                'nicknames': globals.NICKNAMES,
+                'allRuns': all_runs,
+            }, indent=2, fp=fp)
