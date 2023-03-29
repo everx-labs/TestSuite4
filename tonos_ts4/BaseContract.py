@@ -135,7 +135,11 @@ class BaseContract:
             just_deployed = True
         else:
             assert isinstance(address, Address)
-            globals.core.load_account_state(address.str(), make_path(name, '.boc'), make_path(name.split('.', 1)[0], '.abi.json'))
+            boc_path = make_path(name, '.boc')
+            abi_path = make_path(name.split('.', 1)[0], '.abi.json')
+            assert os.path.exists(boc_path)
+            assert os.path.exists(abi_path)
+            globals.core.load_account_state(address.str(), boc_path, abi_path)
             just_deployed = False
         self._init2(name, address, just_deployed = just_deployed)
         if nickname is not None:
