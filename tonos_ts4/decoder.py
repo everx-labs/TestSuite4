@@ -1,6 +1,16 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2022 (c) TON LABS
+"""
+
 from .util      import *
 from .address   import *
 from .abi       import *
+from .global_functions import verbose_
 
 class Decoder:
     """The :class:`Decoder <Decoder>` object, which contains decoder settings.
@@ -23,6 +33,7 @@ class Decoder:
         :param bool tuples: When getter returns tuple whether to return it as tuple or if no return as a map/dict
         :param list skip_fields: The list of the field names to be skipped during decoding stage
         """
+        assert isinstance(skip_fields, list)
         self.ints        = ints
         self.strings     = strings
         self.tuples      = tuples
@@ -74,6 +85,7 @@ def decode_json_value(value, abi_type, decoder):
         res = {}
         for c in abi_type.components:
             field = c.name
+            # print(red(field), value[field])
             if c.dont_decode or field in decoder.skip_fields:
                 res[field] = value[field]
             else:
@@ -103,5 +115,5 @@ def decode_json_value(value, abi_type, decoder):
 
 
     print(type, value)
-    ts4.verbose_("Unsupported type '{}'".format(type))
+    verbose_("Unsupported type '{}'".format(type))
     return value

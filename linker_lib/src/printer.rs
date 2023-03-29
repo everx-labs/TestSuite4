@@ -1,7 +1,7 @@
 /*
-    This file is part of TON OS.
+    This file is part of Ever OS.
 
-    TON OS is free software: you can redistribute it and/or modify
+    Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
     Copyright 2019-2021 (c) TON LABS
@@ -14,8 +14,8 @@ use ton_types::Cell;
 #[allow(dead_code)]
 pub fn state_init_printer(state: &StateInit) -> String {
     format!("StateInit\n split_depth: {}\n special: {}\n data: {}\n code: {}\n lib:  {}\n",
-        state.split_depth.as_ref().map(|x| format!("{:?}", x)).unwrap_or("None".to_string()),
-        state.special.as_ref().map(|x| format!("{:?}", x)).unwrap_or("None".to_string()),
+        state.split_depth.as_ref().map_or_else(|| "None".to_string(), |x| format!("{:?}", x)),
+        state.special.as_ref().map_or_else(|| "None".to_string(), |x| format!("{:?}", x)),
         tree_of_cells_into_base64(state.data.as_ref()),
         tree_of_cells_into_base64(state.code.as_ref()),
         tree_of_cells_into_base64(state.library.root()),
@@ -37,22 +37,11 @@ fn tree_of_cells_into_base64(root_cell: Option<&Cell>) -> String {
 #[allow(dead_code)]
 pub fn msg_printer(msg: &Message) -> String {
     format!("message header\n{}init  : {}\nbody  : {}\nbody_hex: {}\nbody_base64: {}\n",
-        print_msg_header(&msg.header()),
-        msg.state_init().as_ref().map(|x| {
-            format!("{}", state_init_printer(x))
-        }).unwrap_or("None".to_string()),
-        match msg.body() {
-            Some(slice) => format!("{:.2}", slice.into_cell()),
-            None => "None".to_string(),
-        },
-        msg.body()
-            .map(|b| hex::encode(b.get_bytestring(0)))
-            .unwrap_or("None".to_string()),
-        tree_of_cells_into_base64(
-            msg.body()
-                .map(|slice| slice.into_cell())
-                .as_ref(),
-        ),
+        print_msg_header(msg.header()),
+        msg.state_init().map_or_else(|| "None".to_string(), state_init_printer),
+        msg.body().map_or_else(|| "None".to_string(), |slice| format!("{:.2}", slice.into_cell())),
+        msg.body().map_or_else(|| "None".to_string(), |b| hex::encode(b.get_bytestring(0))),
+        tree_of_cells_into_base64(msg.body().map(|slice| slice.into_cell()).as_ref()),
     )
 }
 
