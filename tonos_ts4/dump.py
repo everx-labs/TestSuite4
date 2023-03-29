@@ -10,11 +10,11 @@
 import os
 import json
 
-from .util import *
-from .address import *
-from .abi import *
-from .globals import EVER
-from .global_functions import *
+from util import *
+from address import *
+from abi import *
+from globals import EVER
+from global_functions import *
 
 def dump_struct(struct, compact = False):
     if compact:

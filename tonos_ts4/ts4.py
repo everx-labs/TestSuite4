@@ -18,22 +18,19 @@ import os.path
 import importlib
 from glob import glob
 
-from .util      import *
-from .core      import *
-from .address   import *
-from .abi       import *
-from .decoder   import *
-from .dump      import *
-from .global_functions  import *
-
-from .globals       import core
+from address   import *
+from abi       import *
+from core      import *
+from decoder   import *
+from dump      import *
+from global_functions  import *
+from util      import *
 
 def load_linker_lib():
-    PACKAGE_DIR = os.path.basename(os.path.dirname(__file__))
-    CORE = '.' + sys.platform + '.linker_lib'
+    CORE = sys.platform + '.linker_lib'
 
     try:
-        core = importlib.import_module(CORE, PACKAGE_DIR)
+        core = importlib.import_module(CORE)
     except ImportError as err:
         print('Import module error: {}'.format(err))
         exit()

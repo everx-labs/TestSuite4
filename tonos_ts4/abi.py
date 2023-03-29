@@ -10,8 +10,8 @@
 import copy
 import re
 
-from .address import *
-from .util    import *
+from address import *
+from util    import *
 
 class Abi:
     def __init__(self, contract_name: str):

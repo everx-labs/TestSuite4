@@ -4,10 +4,10 @@
     Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
-    Copyright 2019-2022 (c) TON LABS
+    Copyright 2019-2023 (c) EverX
 """
 
-import tonos_ts4.ts4 as ts4
+import ts4
 from tonos_ts4.ts4 import verbose_, eq, leq, GRAM, BaseContract
 # eq = ts4.eq
 # GRAM = ts4.GRAM

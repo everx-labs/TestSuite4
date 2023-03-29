@@ -9,15 +9,15 @@
 
 import os
 
-from . import globals
+import globals
 
-from .address import *
-from .abi     import *
-from .decoder import *
-from .dump    import *
-from .exception import *
-from .global_functions import *
-from .core import *
+from address import *
+from abi     import *
+from decoder import *
+from dump    import *
+from exception import *
+from global_functions import *
+from core import *
 
 def _build_params_dict(args, inputs):
     if len(args) != len(inputs):

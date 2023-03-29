@@ -4,13 +4,13 @@
     Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
-    Copyright 2019-2022 (c) TON LABS
+    Copyright 2019-2023 (c) EverX
 """
 
-from .util      import *
-from .address   import *
-from .abi       import *
-from .global_functions import verbose_
+from address   import *
+from abi       import *
+from util      import *
+from global_functions import verbose_
 
 class Decoder:
     """The :class:`Decoder <Decoder>` object, which contains decoder settings.

@@ -15,14 +15,14 @@ import shutil
 import subprocess
 import time
 
-from .util      import *
-from .core      import *
-from .address   import *
-from .abi       import *
-from .decoder   import *
-from .dump      import *
-from .globals   import EMPTY_CELL, core
-from .global_functions  import *
+from address   import *
+from abi       import *
+from core      import *
+from decoder   import *
+from dump      import *
+from globals   import EMPTY_CELL, core
+from util      import *
+from global_functions  import *
 
 class GlobalConfig:
     def __init__(self):

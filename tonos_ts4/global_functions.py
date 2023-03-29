@@ -12,10 +12,10 @@ import base64
 import ed25519
 import hashlib
 
-from .abi import *
-from .address import *
-from .globals import EVER
-from .util import *
+from abi import *
+from address import *
+from globals import EVER
+from util import *
 
 def version() -> str:
     """Returns current version of TestSuite4.

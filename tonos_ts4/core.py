@@ -9,13 +9,13 @@
 
 import json
 
-from . import globals
-from .address import *
-from .abi import *
-from .util import *
-from .dump import *
-from .global_functions import *
-from .exception import check_exitcode
+import globals
+from address import *
+from abi import *
+from util import *
+from dump import *
+from global_functions import *
+from exception import check_exitcode
 
 ###########################################################################
 ##  Public functions
