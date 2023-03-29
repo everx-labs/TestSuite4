@@ -9,11 +9,11 @@
 
 use std::sync::Arc;
 
-use crate::sign_cell;
+use crate::sign_cell_hash;
 
 use super::*;
 use serde_json::Value;
-use ton_block::Deserializable;
+use ton_block::{Deserializable, ExternalInboundMessageHeader, Serializable};
 use ton_types::{deserialize_tree_of_cells_inmem, serialize_toc};
 
 const GRAM: u64 = 1_000_000_000;
@@ -109,8 +109,8 @@ fn test_run_get_config() {
     });
     let answer = run_method(&mut gs, abi_config, method, params);
     let cell = answer.as_str().unwrap().to_string();
-    let signature = sign_cell(cell, secret.to_string()).unwrap();
-    assert_eq!(128, signature.len());
+    let signature = sign_cell_hash(cell, secret.to_string()).unwrap();
+    assert_eq!(128, signature.len(), "{}", signature);
 
     // prepare cell with message body
     let method = "upgrade_code_func_builder";
@@ -122,10 +122,17 @@ fn test_run_get_config() {
     });
     let answer = run_method(&mut gs, abi_config, method, params);
     let body = answer.as_str().unwrap().to_string();
+    let body = SliceData::load_cell(decode_cell(&body)).unwrap();
 
+    let src = "".parse().unwrap();
+    let dst = address_str.parse().unwrap();
+    let h = ExternalInboundMessageHeader::new(src, dst);
+    let message = TonBlockMessage::with_ext_in_header_and_body(h, body);
+    let message = message.write_to_bytes().unwrap();
+    let message = base64::encode(message);
     gs.config.trace_tvm = true;
     // call external message to upgrade code
-    let _result = send_external_message_impl(&mut gs, address_str, &body);
+    let _result = send_external_message_impl(&mut gs, address_str, &message);
     // let cell = base64::decode(answer.as_str().unwrap()).unwrap();
     // let cell = deserialize_tree_of_cells_inmem(Arc::new(cell)).unwrap();
     // panic!("{}", result.to_string())
