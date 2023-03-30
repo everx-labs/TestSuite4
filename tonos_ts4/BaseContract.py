@@ -236,7 +236,7 @@ class BaseContract:
         assert isinstance(expect_ec, int)
         return params
 
-    def run_get(self, method: str, params = dict(), expect_ec = 0, decoder = None) -> dict:
+    def run_get(self, method: str, params = dict(), expect_ec = 0, decoder = None):
         """Calls a given getter for funcC contract and returns an answer in raw JSON format.
 
         :param str method: Name of a getter
@@ -529,6 +529,8 @@ class BaseContract:
 
 
 def _make_tuple_result(abi, method, values, decoder):
+    assert isinstance(abi, Abi)
+    assert isinstance(decoder, Decoder)
     types = abi.find_getter_output_types(method)
     res_dict = {}
     res_arr  = []

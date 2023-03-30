@@ -44,7 +44,7 @@ G_LAST_GAS_USED         = 0
 G_MSG_FILTER            = None
 G_ABI_FIXER             = None
 G_OVERRIDE_EXPECT_EC    = None
-
+G_SET_CONFIG_PARAMS     = False
 
 core = None
 version = None

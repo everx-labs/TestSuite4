@@ -63,7 +63,8 @@ class Core:
         self.contracts = dict()
         self.messages = dict()
         self.last_error = None
-        self.config_path = shutil.copy(make_path("bc_config", ".boc"), self.make_temp_path("bocs/bc_config.boc"))
+        self.config_path = make_path("config", ".boc")
+        assert os.path.exists(self.config_path)
         self.global_config = GlobalConfig()
 
     def set_now(self, _now):
@@ -83,19 +84,20 @@ class Core:
         print(yellow('we no need new config'), config)
 
     def set_config_param(self, index, value):
-        assert isinstance(self.config_path, str)
-        assert os.path.exists(self.config_path)
-        abi_path = make_path('config', ".abi.json")
-        assert os.path.exists(abi_path)
-        cli_params = ["debug", "call", "--abi", abi_path, "--update"]
-        self.add_now_param(cli_params, 1)
-        self.add_config_param(cli_params, "--config")
-        self.add_temp_keys_param(cli_params, self.config_key)
-        method = "set_config_param"
-        cli_params += ["--boc", "--addr", self.config_path, "--method", method]
-        self.add_method_params(cli_params, value)
-        result = self.run_tonos_cli(cli_params)
-        return self.parse_execution_result("bc_config", result, method)
+        print(yellow('we no need new config'), index)
+        # assert isinstance(self.config_path, str)
+        # assert os.path.exists(self.config_path)
+        # abi_path = make_path('config', ".abi.json")
+        # assert os.path.exists(abi_path)
+        # cli_params = ["debug", "call", "--abi", abi_path, "--update"]
+        # self.add_now_param(cli_params, 1)
+        # self.add_config_param(cli_params, "--config")
+        # self.add_temp_keys_param(cli_params, self.config_key)
+        # method = "set_config_param"
+        # cli_params += ["--boc", "--addr", self.config_path, "--method", method]
+        # self.add_method_params(cli_params, value)
+        # result = self.run_tonos_cli(cli_params)
+        # return self.parse_execution_result("bc_config", result, method)
 
     def add_config_param(self, cli_params, name = "--bc_config"):
         if self.config_path is not None and os.path.exists(self.config_path):
@@ -197,8 +199,8 @@ class Core:
         assert os.path.exists(boc_path)
         if pubkey is not None:
             boc_path = shutil.move(boc_path, boc_path.removesuffix(".boc") + "-" + pubkey[:8] + ".boc")
-        # if name.startswith('Config'):
-        #     self.config_path = boc_path
+        if name.startswith('Config'):
+            self.config_path = boc_path
         # TODO: we don't story keys if no private
         # TODO: don't store tvc_path
         self.contracts[address] = ContractDescription(tvc_path, abi_path, boc_path, dbg_path, key_path)
@@ -238,9 +240,21 @@ class Core:
 
     def call_getter(self, address: str, method: str, params: str, is_debot = False) -> str:
         descr = self.get_contract(address)
-        cli_params = ["runx", "--boc", "--abi", descr.abi_path]
-        # self.add_config_param(cli_params) # TODO: here problem - need config params
-        cli_params += ["--addr", descr.boc_path, "--method", method, params]
+        if 0: # self.global_config.trace_tvm is not None:
+            # it does not give answers
+            cli_params = ["debug", "run", "--boc", "--abi", descr.abi_path]
+            self.add_config_param(cli_params, "--config")
+            self.add_now_param(cli_params)
+            self.add_output_param(cli_params, descr.dbg_path)
+            cli_params += ["--addr", descr.boc_path, "--method", method, params]
+            result = self.run_tonos_cli(cli_params)
+            return self.parse_execution_result(address, result, method)
+        else:
+            # it does not give debug
+            cli_params = ["runx", "--boc", "--abi", descr.abi_path]
+            self.add_config_param(cli_params, "--bc_config")
+            cli_params += ["--addr", descr.boc_path, "--method", method, params]
+
         result = self.run_tonos_cli(cli_params)
         error = result.get("Error")
         if error is not None:
@@ -525,7 +539,7 @@ class Core:
     def print_config_param(self, index: int, cell: str):
         if cell == EMPTY_CELL:
             return 'no parameter set'
-        param_path = make_path("params", ".bin")
+        param_path = self.make_temp_path("bocs/params", ".bin")
         with open(param_path, "wb") as f:
             f.write(base64.b64decode(cell))
         cli_params = ["test", "config", "--decode", param_path, "--index", str(index)]
