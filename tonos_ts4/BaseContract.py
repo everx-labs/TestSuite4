@@ -13,11 +13,11 @@ import globals
 
 from address import *
 from abi     import *
+from core import *
 from decoder import *
 from dump    import *
 from exception import *
 from global_functions import *
-from core import *
 
 def _build_params_dict(args, inputs):
     if len(args) != len(inputs):
@@ -54,8 +54,8 @@ class BaseContract:
     """
     def __init__(self,
         name: str,
-        ctor_params:  dict | None = None,
-        initial_data: dict | None = None,
+        ctor_params         = None,
+        initial_data        = None,
         wc                  = 0,
         address             = None,
         override_address    = None,
@@ -135,11 +135,7 @@ class BaseContract:
             just_deployed = True
         else:
             assert isinstance(address, Address)
-            boc_path = make_path(name, '.boc')
-            abi_path = make_path(name.split('.', 1)[0], '.abi.json')
-            assert os.path.exists(boc_path)
-            assert os.path.exists(abi_path)
-            globals.core.load_account_state(address.str(), boc_path, abi_path)
+            globals.core.load_account_state(address.str(), make_path(name, '.boc'), make_path(name.split('.', 1)[0], '.abi.json'))
             just_deployed = False
         self._init2(name, address, just_deployed = just_deployed)
         if nickname is not None:
@@ -236,7 +232,7 @@ class BaseContract:
         assert isinstance(expect_ec, int)
         return params
 
-    def run_get(self, method: str, params = dict(), expect_ec = 0, decoder = None):
+    def run_get(self, method: str, params = dict(), expect_ec = 0, decoder = None) -> dict:
         """Calls a given getter for funcC contract and returns an answer in raw JSON format.
 
         :param str method: Name of a getter
@@ -654,7 +650,7 @@ def dispatch_messages(callback = None, limit = None, expect_ec = [0]):
                 break
     return count > 0
 
-def dispatch_one_message(expect_ec = 0, src: BaseContract | None = None, dst: BaseContract | None = None):
+def dispatch_one_message(expect_ec = 0, src = None, dst = None):
     """Takes first unprocessed message from the queue and dispatches it.
     Use `expect_ec` parameter if you expect non-zero exit code.
 

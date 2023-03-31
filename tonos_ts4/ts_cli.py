@@ -15,14 +15,14 @@ import shutil
 import subprocess
 import time
 
-from address   import *
 from abi       import *
+from address   import *
 from core      import *
 from decoder   import *
 from dump      import *
 from globals   import EMPTY_CELL, core
-from util      import *
 from global_functions  import *
+from util      import *
 
 class GlobalConfig:
     def __init__(self):
@@ -223,7 +223,7 @@ class Core:
             abi_path = None
         self.contracts[address] = ContractDescription(None, abi_path, boc_path, dbg_path, None)
     
-    def call_contract(self, address: str, method: str, is_getter, is_debot, params: str, private_key: str | None = None) -> str:
+    def call_contract(self, address: str, method: str, is_getter, is_debot, params: str, private_key: str = None) -> str:
         if is_getter:
             assert private_key is None
             return self.call_getter(address, method, params, is_debot)
@@ -352,7 +352,7 @@ class Core:
         )
         return json_dumps(result)
 
-    def parse_execution_result(self, address: str | None, result: dict, name: str | None = None, abi_path: str | None = None) -> str:
+    def parse_execution_result(self, address: str, result: dict, name: str = None, abi_path: str = None) -> str:
         error = result.get("Error")
         if error is not None:
             return self.parse_error(error)
@@ -393,7 +393,7 @@ class Core:
         )
         return json_dumps(result)
 
-    def parse_message(self, address: str | None, description: dict) -> str:
+    def parse_message(self, address: str, description: dict) -> str:
         header = description["Header"]
         src = header["source"]
         assert eq(address, src)
@@ -440,7 +440,7 @@ class Core:
         with open(msg_path, 'rb') as fp:
             return base64.b64encode(fp.read(1_000_000)).decode('utf-8')
         
-    def get_last_error_msg(self) -> str | None:
+    def get_last_error_msg(self):
         return self.last_error
 
     def sign_cell_hash(self, cell: str, private_key: str) -> str:
@@ -519,7 +519,7 @@ class Core:
             return result
         return self.parse_execution_result(None, result)
 
-    def decode_message(self, message: str, abi_path: str | None) -> dict:
+    def decode_message(self, message: str, abi_path: str) -> dict:
         cli_params = ["decode", "msg", "--abi", abi_path, message]
         return self.run_tonos_cli(cli_params)
     

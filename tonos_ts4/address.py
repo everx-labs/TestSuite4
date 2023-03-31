@@ -8,10 +8,8 @@
 """
 
 import json
-
 import globals
 from util import *
-
 
 class Address:
     """The :class:`Address <Address>` object, which contains an

@@ -7,8 +7,8 @@
     Copyright 2019-2023 (c) EverX
 """
 
-from tonos_ts4 import ts4
-from .ts4 import eq
+import ts4
+from ts4 import eq
 
 def load_debot(filename, nickname):
     global g_debot

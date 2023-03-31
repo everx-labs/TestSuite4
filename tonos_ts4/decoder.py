@@ -9,8 +9,8 @@
 
 from address   import *
 from abi       import *
-from util      import *
 from global_functions import verbose_
+from util      import *
 
 class Decoder:
     """The :class:`Decoder <Decoder>` object, which contains decoder settings.

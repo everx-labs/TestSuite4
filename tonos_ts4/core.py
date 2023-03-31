@@ -12,10 +12,10 @@ import json
 import globals
 from address import *
 from abi import *
-from util import *
 from dump import *
-from global_functions import *
 from exception import check_exitcode
+from global_functions import *
+from util import *
 
 ###########################################################################
 ##  Public functions
@@ -156,7 +156,7 @@ def deploy_contract_ext(contract, ctor_params, initial_data, pubkey, private_key
     )
     return address
 
-def parse_config_param(p: dict) -> Cell | None:
+def parse_config_param(p: dict):
     assert isinstance(p, dict)
     cell = globals.core.parse_config_param(json_dumps(p))
     try:

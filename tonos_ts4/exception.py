@@ -11,7 +11,6 @@ import os
 import base64
 import hashlib
 
-
 from abi import *
 from address import *
 from decoder import Decoder
