@@ -1,8 +1,15 @@
-import json
+"""
+    This file is part of Ever OS.
 
-from . import globals
-from . import ts4
-from .util import *
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2023 (c) EverX
+"""
+
+import json
+import globals
+from util import *
 
 class Address:
     """The :class:`Address <Address>` object, which contains an
@@ -95,6 +102,7 @@ class Address:
 
 class Bytes():
     """The :class:`Bytes <Bytes>` object, which represents bytes type.
+    if string is symbols - need to call str2bytes to get hexadecimal representation
     """
     def __init__(self, value):
         """Constructs :class:`Bytes <Bytes>` object.
@@ -135,7 +143,13 @@ class Cell():
         return self.__repr__()
 
     def __repr__(self):
-        return "Cell('{}')".format(self.raw_)
+        return "Cell('{}')".format(self.short_raw())
+
+    def short_raw(self):
+        t = self.raw_
+        if (len(t) > 16):
+            t = t[:13] + '...'
+        return t
 
     def __eq__(self, other):
         if isinstance(other, Cell):
@@ -289,7 +303,7 @@ class Msg:
         dump_struct(self.data)
 
     def __str__(self):
-        return ts4.dump_struct_str(self.data)
+        return dump_struct_str(self.data)
 
 
 class Params:
@@ -307,18 +321,23 @@ class Params:
                 value = params[key]
                 if isinstance(value, dict):
                     value = Params(value)
-                if isinstance(value, Bytes) and ts4.decoder.strings is True:
+                if isinstance(value, Bytes) and decoder.strings is True:
                     value = str(value)
                 if isinstance(value, list):
                     value = [self.tr(x) for x in value]
                 setattr(self, key, value)
 
     @staticmethod
-    def stringify(d):
+    def stringify(d, max_str_len = 67):
         arr = []
         for k, v in d.items():
             if isinstance(v, dict):
                 arr.append(f'{(k)}: {{{Params.stringify(v)}}}')
+            elif isinstance(v, str):
+                v  = v if len(v) <= max_str_len else v[:max_str_len] + '...'
+                arr.append(f'{(k)}: {(v)}')
+            elif isinstance(v, Bytes):
+                arr.append(f'{(k)}: {(v)!r}')
             else:
                 arr.append(f'{(k)}: {(v)}')
 
@@ -345,14 +364,6 @@ def make_params(data):
     return data
 
 
-class ExecutionResult:
-    def __init__(self, result):
-        (ec, actions, gas, err) = result
-        self.exit_code  = ec
-        self.actions    = actions
-        self.gas_used   = gas
-        self.error      = err
-
 def prettify_dict(d, max_str_len = 67):
     nd = {}
     for k, v in d.items():
@@ -361,7 +372,9 @@ def prettify_dict(d, max_str_len = 67):
         elif isinstance(v, str):
             nd[k] = v if len(v) <= max_str_len else v[:max_str_len] + '...'
         elif isinstance(v, Address):
-            nd[k] = ts4.format_addr(v, compact = False)
+            nd[k] = format_addr(v, compact = False)
+        elif isinstance(v, Cell):
+            nd[k] = v.short_raw()
         else:
             nd[k] = v
 

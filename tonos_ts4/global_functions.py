@@ -1,40 +1,48 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2023 (c) EverX
+"""
+
 import os
 import base64
+import ed25519
 import hashlib
 
-from . import globals as g
-from .globals import GRAM, EMPTY_CELL
-from .util import *
-from .address import *
-from .abi import *
-from . import ts4
+from abi import *
+from address import *
+from globals import EVER
+from util import *
 
-def version():
+def version() -> str:
     """Returns current version of TestSuite4.
 
     :return: Current version
     :rtype: str
     """
-    return g.G_VERSION
+    return globals.version
 
 
 def reset_all():
-    """Resets entire TS4 state. Useful when starting new testset.
+    """Resets entire TS state. Useful when starting new testset.
     """
-    g.core.reset_all()
-    g.QUEUE           = []
-    g.EVENTS          = []
-    g.ALL_MESSAGES    = []
-    g.NICKNAMES       = dict()
+    globals.core.reset_all()
+    globals.QUEUE           = []
+    globals.EVENTS          = []
+    globals.ALL_MESSAGES    = []
+    globals.NICKNAMES       = dict()
 
 def set_tests_path(path):
     """Sets the directory where the system will look for compiled contracts.
 
     :param str path: The path to contract artifacts
     """
-    g.G_TESTS_PATH = path
+    globals.G_TESTS_PATH = path
 
-def init(path, verbose = False, time = None):
+def init(path, verbose = False, time = None, show_getters = False):
     """Initializes the library.
 
     :param str path: Directory where the artifacts of the used contracts are located
@@ -50,8 +58,9 @@ def init(path, verbose = False, time = None):
     )
     set_tests_path(path)
     set_verbose(verbose)
+    globals.G_SHOW_GETTERS = show_getters
     if time is not None:
-        g.core.set_now(time)
+        globals.core.set_now(time)
 
 def set_verbose(verbose = True):
     """Sets verbosity mode. When verbosity is enabled all the messages
@@ -59,7 +68,7 @@ def set_verbose(verbose = True):
 
     :param bool verbose: Toggle to print additional execution info
     """
-    g.G_VERBOSE = verbose
+    globals.G_VERBOSE = verbose
 
 def set_stop_at_crash(do_stop):
     """Sets `G_STOP_AT_CRASH` global flag.
@@ -69,7 +78,7 @@ def set_stop_at_crash(do_stop):
 
     :param bool do_stop: Toggle for crash stop mode
     """
-    g.G_STOP_AT_CRASH = do_stop
+    globals.G_STOP_AT_CRASH = do_stop
 
 def verbose_(msg):
     """Helper function to show text colored red in console. Useful when debugging.
@@ -85,67 +94,65 @@ def verbose(msg, show_always = False, color_red = False):
     :param bool show_always: When enabled forces to show message even when verbose mode is off
     :param bool color_red: Emphasize the message in color
     """
-    if g.G_VERBOSE or show_always:
+    if globals.G_VERBOSE or show_always:
         if color_red:
             msg = red(str(msg))
         print(msg)
 
-def pop_msg():
-    """Removes first message from the unprocessed messages g.QUEUE and returns it.
+def pop_msg() -> Msg:
+    """Removes first message from the unprocessed messages globals.QUEUE and returns it.
 
     :return: Object
     :rtype: Msg
     """
-    assert len(g.QUEUE) > 0
-    return g.QUEUE.pop(0)
+    assert ne(0, len(globals.QUEUE), msg = "message queue is empty")
+    return globals.QUEUE.pop(0)
 
 def peek_msg():
-    """Returns first message from the unprocessed messages g.QUEUE and leaves the g.QUEUE unchanged.
+    """Returns first message from the unprocessed messages globals.QUEUE and leaves the globals.QUEUE unchanged.
 
     :return: Object
     :rtype: Msg
     """
-    assert len(g.QUEUE) > 0
-    return g.QUEUE[0]
+    return globals.QUEUE[0] if len(globals.QUEUE) != 0 else None
 
 def pop_event():
-    """Removes first event from the unprocessed events g.QUEUE and returns it.
+    """Removes first event from the unprocessed events globals.QUEUE and returns it.
 
     :return: Object
     :rtype: Msg
     """
-    assert len(g.EVENTS) > 0
-    return g.EVENTS.pop(0)
+    assert ne(0, len(globals.EVENTS), msg = "event queue is empty")
+    return globals.EVENTS.pop(0)
 
 def peek_event():
-    """Returns first event from the unprocessed events g.QUEUE and leaves the g.QUEUE unchanged.
+    """Returns first event from the unprocessed events globals.QUEUE and leaves the globals.QUEUE unchanged.
 
     :return: Object
     :rtype: Msg
     """
-    assert len(g.EVENTS) > 0
-    return g.EVENTS[0]
+    return globals.EVENTS[0] if len(globals.EVENTS) > 0 else None
 
 def queue_length():
-    """Returns the size of the unprocessed messages g.QUEUE.
+    """Returns the size of the unprocessed messages globals.QUEUE.
 
-    :return: g.QUEUE length
+    :return: globals.QUEUE length
     :rtype: num
     """
-    return len(g.QUEUE)
+    return len(globals.QUEUE)
 
 def ensure_queue_empty():
-    """Checks if the unprocessed messages g.QUEUE is empty
+    """Checks if the unprocessed messages globals.QUEUE is empty
     and raises an error if it is not. Useful for debugging.
     """
-    assert eq(0, len(g.QUEUE), msg = ('ensure_queue_empty() -'))
+    assert eq(0, len(globals.QUEUE), msg = 'message queue is not empty')
 
 def dump_queue():
-    """Dumps messages g.QUEUE to the console.
+    """Dumps messages globals.QUEUE to the console.
     """
-    print(white("g.QUEUE:")) # revise print
-    for i in range(len(g.QUEUE)):
-        print("  {}: {}".format(i, g.QUEUE[i]))
+    print(white("globals.QUEUE:")) # revise print
+    for i in range(len(globals.QUEUE)):
+        print("  {}: {}".format(i, globals.QUEUE[i]))
 
 def set_msg_filter(filter):
     if filter is True:  filter = lambda msg: True
@@ -191,41 +198,20 @@ def format_addr(addr, compact = True):
             s = 'Addr({})'.format(s)
     return s
 
-def gen_addr(name, initial_data = None, keypair = None, wc = 0):
-    """Generates contract addresss.
-
-    :param str name: Name used to load contract's bytecode and ABI
-    :param dict initial_data: Initial data for the contract (static members)
-    :param keypair: Keypair containing private and public keys
-    :param num wc: workchain_id to deploy contract to
-    :return: Expected contract address
-    :rtype: Address
-    """
-    if keypair is not None:
-        # TODO: copy-paste below!
-        (private_key, pubkey) = keypair
-        if pubkey is not None:
-            assert pubkey[0:2] == '0x'
-            pubkey = pubkey.replace('0x', '')
+def format_addr_colored(addr, color1, color2):
+    Address.ensure_address(addr)
+    if addr.is_none():
+        return colorize(color1, 'addr_none')
+    addr = addr.str()
+    s = addr[:10]
+    if addr in globals.NICKNAMES:
+        s = colorize(color1, globals.NICKNAMES[addr]) + colorize(color2, ' ({})'.format(s))
+        # s = "{} ({})".format(globals.NICKNAMES[addr], s)
     else:
-        (private_key, pubkey) = (None, None)
+        s = colorize(color1, '{}'.format(s))
+    return s
 
-    abi = Abi(name)
-
-    if initial_data is not None:
-        initial_data = ts4.check_method_params(abi, '.data', initial_data)
-
-    result = ts4.core.gen_addr(
-            make_path(name, '.tvc'),
-            abi.path_,
-            ts4.json_dumps(initial_data) if initial_data is not None else None,
-            pubkey,
-            private_key,
-            wc
-        )
-    return Address(result)
-
-def make_keypair(seed = None):
+def make_keypair(seed = None) -> tuple[str, str]:
     """Generates random keypair.
 
     :param str seed: Seed to be used to generate keys. Useful when constant keypair is needed
@@ -236,9 +222,10 @@ def make_keypair(seed = None):
         hash = hashlib.sha256(seed.encode('utf-8'))
         seed = decode_int('0x' + hash.hexdigest())
         seed = seed % (2**64)
-    (secret_key, public_key) = globals.core.make_keypair(seed)
-    public_key = '0x' + public_key
-    return (secret_key, public_key)
+    (private_key, public_key) = ed25519.create_keypair()
+    private_key = private_key.to_ascii(encoding='hex').decode()
+    public_key = public_key.to_ascii(encoding='hex').decode()
+    return (private_key + public_key, public_key)
 
 def save_keypair(keypair, filename):
     """Saves keypair to file.
@@ -268,27 +255,19 @@ def load_keypair(filename):
     secret = j['secret']
     return (secret, '0x' + public)
 
-def make_path(name, ext):
-    fn = os.path.join(globals.G_TESTS_PATH, name)
-    if not fn.endswith('.boc'):
-        if not fn.endswith(ext):
-            fn += ext
-    return fn
-
-# TODO: Shouldn't this function return Cell?
-def load_tvc(fn):
+def load_tvc(fn, extension = '.tvc') -> Cell:
     """Loads a compiled contract image (`.tvc`) with a given name.
 
     :param str fn: The file name
     :return: Cell object loaded from a given file
     :rtype: Cell
     """
-    fn = make_path(fn, '.tvc')
+    fn = make_path(fn, extension)
     with open(fn, 'rb') as fp:
         str = base64.b64encode(fp.read(1_000_000)).decode('utf-8')
         return Cell(str)
 
-def load_code_cell(fn):
+def load_code_cell(fn) -> Cell:
     """Loads contract code cell from a compiled contract image with a given name.
 
     :param str fn: The file name
@@ -298,7 +277,7 @@ def load_code_cell(fn):
     fn = make_path(fn, '.tvc')
     return Cell(globals.core.load_code_cell(fn))
 
-def load_data_cell(fn):
+def load_data_cell(fn) -> Cell:
     """Loads contract data cell from a compiled contract image with a given name.
 
     :param str fn: The file name
@@ -308,15 +287,20 @@ def load_data_cell(fn):
     fn = make_path(fn, '.tvc')
     return Cell(globals.core.load_data_cell(fn))
 
+def evers(n):
+    if n is None: return None
+    return '{:.3f}'.format(n / EVER).replace('.000', '')
+
+# deprecated
 def grams(n):
-    return '{:.3f}'.format(n / GRAM).replace('.000', '')
+    return evers(n)
 
 def ensure_balance(expected, got, dismiss = False, epsilon = 0, msg = None):
     """Checks the contract balance for exact match.
     In case of mismatch prints the difference in a convenient form.
 
     :param num expected: Expected balance value
-    :param num got: Сurrent balance value
+    :param num got: Current balance value
     :param bool dismiss: When False don't stop the execution in case of mismatch
     :param num epsilon: Allowed difference between requested and actual balances
     :param str msg: Optional message to print in case of mismatch
@@ -327,7 +311,7 @@ def ensure_balance(expected, got, dismiss = False, epsilon = 0, msg = None):
     diff = got - int(expected)
     if abs(diff) <= epsilon:
         return
-    xtra = ", diff = {}g ({})".format(grams(diff), diff)
+    xtra = ", diff = {}g ({})".format(evers(diff), diff)
     assert eq(int(expected), got, xtra = xtra, dismiss = dismiss, msg = msg)
 
 def register_abi(contract_name):
@@ -341,7 +325,7 @@ def register_abi(contract_name):
         print(blue("Loading ABI " + fn))
     globals.core.set_contract_abi(None, fn)
 
-def sign_cell(cell, private_key):
+def sign_cell(cell: Cell, private_key: str) -> str:
     """Signs cell with a given key and returns signature.
 
     :param Cell value: Cell to be signed
@@ -352,27 +336,30 @@ def sign_cell(cell, private_key):
     assert isinstance(cell, Cell)
     assert isinstance(private_key, str)
     assert eq(128, len(private_key))
-    # TODO: check that it is hexadecimal number
     return globals.core.sign_cell(cell.raw_, private_key)
 
-def encode_message_body(abi_name, method, params):
-    """Encode given message body.
+def sign_cell_hash(cell: Cell, private_key: str) -> str:
+    """Signs cell's repr_hash with a given key and returns signature.
 
-    :param str abi_name: The contract name the ABI of which should be used for encoding
-    :param str method: A name of the encoded method
-    :param dict params: A dictionary with parameters for the encoded method
-    :return: Cell object containing encoded message
-    :rtype: Cell
+    :param Cell value: Cell to be signed
+    :param str private_key: Hexadecimal representation of 1024-bits long private key
+    :return: Hexadecimal string representing resulting signature
+    :rtype: str
     """
-    abi_file = make_path(abi_name, '.abi.json')
-    encoded = globals.core.encode_message_body(
-        abi_file,
-        method,
-        ts4.json_dumps(params)
-    )
-    return Cell(encoded)
+    assert isinstance(cell, Cell)
+    assert isinstance(private_key, str)
+    assert eq(128, len(private_key))
+    return globals.core.sign_cell_hash(cell.raw_, private_key)
 
-def set_config_param(index, value):
+def last_gas():
+    """Returns the gas used in the last contract execution.
+
+    :return: gas used in the last contract execution
+    :rtype: num
+    """
+    return globals.G_LAST_GAS_USED
+
+def set_config_param(index: int, value: Cell):
     """Sets global config parameter.
 
     :param num index: Parameter index
@@ -404,7 +391,7 @@ def set_contract_abi(contract, new_abi_name):
     :param BaseContract contract: An instance of the contract where the ABI will be set
     :param str new_abi_name: Name of the file containing the ABI
     """
-    assert isinstance(contract, ts4.BaseContract)
+    assert isinstance(contract, BaseContract)
 
     contract.abi = Abi(new_abi_name)
     globals.core.set_contract_abi(contract.addr.str(), contract.abi.path_)

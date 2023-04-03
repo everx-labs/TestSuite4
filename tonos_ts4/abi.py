@@ -1,17 +1,22 @@
-# TODO: add header
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2023 (c) EverX
+"""
 
 import copy
+import re
 
-from .util    import *
-from .address import *
-
-from . import ts4
-
+from address import *
+from util    import *
 
 class Abi:
-    def __init__(self, contract_name):
-        self.contract_name_ = contract_name
-        self.path_ = ts4.make_path(contract_name, '.abi.json')
+    def __init__(self, contract_name: str):
+        self.contract_name_ = contract_name.split('.')[0]
+        self.path_ = make_path(self.contract_name_, '.abi.json')
         with open(self.path_, 'rb') as fp:
             self.json = json.load(fp)
 
@@ -112,7 +117,7 @@ def decode_event_inputs(event_def, values):
         name  = type.name
         value = values[name]
         if not type.dont_decode:
-            value = ts4.decode_json_value(value, type, ts4.decoder)
+            value = decode_json_value(value, type, decoder)
         res[name] = value
 
     return Params(res)
@@ -121,35 +126,35 @@ def decode_event_inputs(event_def, values):
 def check_method_params(abi, method, params):
     assert isinstance(abi, Abi)
 
-    # ts4.verbose('check_method_params {}'.format(params))
+    # verbose('check_method_params {} {}'.format(method, params))
     if method == '.data':
         inputs = abi.json['data']
     else:
         func = abi.find_abi_method(method)
         if func is None:
-            raise Exception("Unknown method name '{}'".format(method))
+            raise BaseException("Unknown method name '{}'".format(method))
         inputs = func['inputs']
     res = {}
     for param in inputs:
         pname = param['name']
         if pname not in params:
-            # ts4.verbose('Raising exception')
+            # verbose('Raising exception')
             if globals.G_VERBOSE:
                 print('params =', params)
-            raise Exception("Parameter '{}' is missing when calling method '{}'".format(pname, method))
-        # ts4.dump_struct(param)
-        # ts4.dump_struct(params[pname])
+            raise BaseException("Parameter '{}' is missing when calling method '{}'".format(pname, method))
+        # dump_struct(param)
+        # dump_struct(params[pname])
         res[pname] = check_param_names_rec(params[pname], AbiType(param))
     return res
 
 def _raise_type_mismatch(expected_type, value, abi_type):
     msg = 'Expected {}, got {}'.format(expected_type, value.__repr__())
-    if ts4.globals.G_CHECK_ABI_TYPES:
-        if ts4.globals.G_VERBOSE:
-            ts4.verbose_('Expected type: {}'.format(abi_type))
-        raise Exception(msg)
+    if globals.G_CHECK_ABI_TYPES:
+        if globals.G_VERBOSE:
+            verbose_('Expected type: {}'.format(abi_type))
+        raise BaseException(msg)
     else:
-        ts4.verbose_(msg)
+        verbose_(msg)
 
 def create_AbiType(type_str, abi_type):
     assert isinstance(abi_type, AbiType)
@@ -167,6 +172,9 @@ def check_param_names_rec(value, abi_type):
         return value
 
     if abi_type.is_array():
+        if not isinstance(value, list):
+            _raise_type_mismatch('list', value, abi_type)
+
         type2 = abi_type.remove_array()
         value2 = []
         for v in value:
@@ -174,7 +182,7 @@ def check_param_names_rec(value, abi_type):
             value2.append(v2)
         return value2
 
-    # print(ts4.red(value.__str__()), ts4.yellow(value.__repr__()))
+    # print(red(value.__str__()), yellow(value.__repr__()))
 
     if type == 'bool':
         if not isinstance(value, bool):
@@ -200,18 +208,19 @@ def check_param_names_rec(value, abi_type):
 
     if type == 'bytes':
         if isinstance(value, str):
-            return Bytes(str2bytes(value))
+            return Bytes(value)
         if isinstance(value, Bytes):
             return value
-        _raise_type_mismatch('string', value, abi_type)
+        _raise_type_mismatch('bytes', value, abi_type)
 
     if type == 'tuple':
-        assert isinstance(value, dict)
+        if not isinstance(value, dict):
+            _raise_type_mismatch('dict', value, abi_type)
         res = {}
         for c in abi_type.components:
             field = c.name
             if not field in value:
-                raise Exception("Field '{}' is missing in structure '{}'".format(field, abi_type.name))
+                raise BaseException("Field '{}' is missing in structure '{}'".format(field, abi_type.name))
             res[field] = check_param_names_rec(value[field], c)
         return res
 
@@ -233,6 +242,6 @@ def check_param_names_rec(value, abi_type):
         return res
 
     print(type, value)
-    ts4.verbose_("Unsupported type to encode '{}'".format(type))
+    verbose_("Unsupported type to encode '{}'".format(type))
     return value
 

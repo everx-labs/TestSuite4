@@ -1,10 +1,10 @@
 /*
-    This file is part of TON OS.
+    This file is part of Ever OS.
 
-    TON OS is free software: you can redistribute it and/or modify
+    Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
-    Copyright 2019-2021 (c) TON LABS
+    Copyright 2019-2023 (c) EverX
 */
 
 use std::collections::HashMap;
@@ -51,10 +51,14 @@ impl AllAbis {
         self.all_abis.iter().map(|pair| pair.1.text().clone()).collect()
     }
 
-    fn decode_function_call(&self, body: &SliceData, internal: bool) -> Option<ton_abi::DecodedMessage> {
+    fn decode_function_call(&self, body: &SliceData, internal: bool, abi_str: &str) -> Option<ton_abi::DecodedMessage> {
+        let res = decode_unknown_function_call(abi_str.to_owned(), body.clone(), internal, false);
+        if let Ok(res) = res {
+            return Some(res);
+        }
         for abi_str in self.values() {
             // println!("contract: {}", &contract.name);
-            let res = decode_unknown_function_call(abi_str, body.clone(), internal);
+            let res = decode_unknown_function_call(abi_str, body.clone(), internal, false);
             if let Ok(res) = res {
                 return Some(res);
             }
@@ -62,12 +66,14 @@ impl AllAbis {
         None
     }
 
-    pub fn from_file(&mut self, filename: &String) -> Result<AbiInfo, String> {
-        if !self.all_abis.contains_key(filename) {
-            let info = AbiInfo::from_file(filename.clone())?;
-            self.register_abi(info);
+    pub fn read_from_file(&mut self, filename: &String) -> Result<AbiInfo, String> {
+        if let Some(abi_info) = self.all_abis.get(filename) {
+            Ok(abi_info.clone())
+        } else {
+            let abi_info = AbiInfo::from_file(filename.clone())?;
+            self.all_abis.insert(filename.clone(), abi_info.clone());
+            Ok(abi_info)
         }
-        Ok(self.all_abis[filename].clone())
     }
 
 }
@@ -82,7 +88,7 @@ impl AbiInfo {
     fn from_file(filename: String) -> Result<AbiInfo, String> {
         let abi_str = load_abi_json_string(&filename)?;
         let abi_info = AbiInfo {
-            filename: filename,
+            filename,
             text: abi_str,
         };
         Ok(abi_info)
@@ -97,6 +103,7 @@ pub fn decode_body(
     abi_info: &AbiInfo,
     method: Option<String>,
     out_msg: &TonBlockMessage,
+    is_debot_call: bool,
 ) -> MsgAbiInfo {
 
     let internal = out_msg.is_internal();
@@ -104,13 +111,14 @@ pub fn decode_body(
 
     // TODO: refactor this function
 
-    if gs.trace {
-        println!("decode_body {:?} {:?}", body, &method);
+    if gs.is_trace(3) {
+        println!("decode_body: {:?} {:?}", &method, body);
     }
 
     if body.is_none() {
         return MsgAbiInfo::create_empty();
     }
+    
     let body = body.unwrap();
 
     let abi_str = abi_info.text();
@@ -121,7 +129,8 @@ pub fn decode_body(
             abi_str.clone(),
             method.clone(),
             body.clone(),
-            internal
+            internal,
+            false,
         );
         if let Ok(s) = s {
             return MsgAbiInfo::create_answer(s, method);
@@ -129,18 +138,33 @@ pub fn decode_body(
     }
 
     // Check for a call to a remote method
-    if let Some(res) = gs.all_abis.decode_function_call(&body, internal) {
-        // println!(">> {} {}", res.function_name, res.params);
+    if let Some(res) = gs.all_abis.decode_function_call(&body, internal, abi_str) {
+        if gs.is_trace(5) {
+            println!("decode_function_call - {} {}", res.function_name, res.params);
+        }
         return MsgAbiInfo::create_call(res.params, res.function_name);
     }
 
     // Check for event
-    let s = decode_unknown_function_response(abi_str.clone(), body.clone(), internal);
+    let s = decode_unknown_function_response(abi_str.clone(), body.clone(), internal, false);
     if let Ok(s) = s {
-        return MsgAbiInfo::create_event(s.params, s.function_name);
+        if gs.is_trace(5) {
+            println!("decode_unknown_function_response - {} {}", s.function_name, s.params);
+        }
+        if is_debot_call {
+            let mut abi_info = MsgAbiInfo::create_answer(s.params, s.function_name);
+            abi_info.set_debot_mode();
+            return abi_info;
+        } else {
+            return MsgAbiInfo::create_event(s.params, s.function_name);
+        }
     }
 
-    return MsgAbiInfo::create_unknown();
+    if gs.is_trace(1) {
+        println!("Unknown message! body = {:?}", body);
+    }
+    
+    MsgAbiInfo::create_unknown()
 }
 
 pub fn build_abi_body(
@@ -150,7 +174,9 @@ pub fn build_abi_body(
     header: Option<String>,
     internal: bool,
     pair: Option<&Keypair>,
+    address: Option<String>,
 ) -> Result<BuilderData, String> {
+    assert!(internal || address.is_some());
     encode_function_call(
         abi_info.text().clone(),
         method.to_owned(),
@@ -158,6 +184,7 @@ pub fn build_abi_body(
         params.to_owned(),
         internal,
         pair,
+        address
     ).map_err(|e| format!("cannot encode abi body: {:?}", e))
 }
 
@@ -165,7 +192,7 @@ pub fn set_public_key(state_init: &mut StateInit, pubkey: String) -> Result<(), 
     let pubkey = hex::decode(pubkey)
         .map_err(|e| format!("cannot decode public key: {}", e))?;
     let pubkey = PublicKey::from_bytes(&pubkey).unwrap();
-    let data = state_init.data.clone().unwrap().into();
+    let data = SliceData::load_cell(state_init.data.clone().unwrap()).unwrap();
     let new_data = ton_abi::Contract::insert_pubkey(data, pubkey.as_bytes()).unwrap();
     state_init.set_data(new_data.into_cell());
     Ok(())

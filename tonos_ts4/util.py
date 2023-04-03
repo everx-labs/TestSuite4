@@ -1,6 +1,18 @@
+"""
+    This file is part of Ever OS.
+
+    Ever OS is free software: you can redistribute it and/or modify
+    it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
+
+    Copyright 2019-2023 (c) EverX
+"""
+
+import base64
+import os
 import sys
-import re
 import binascii
+
+from address import *
 
 class BColors:
     HEADER = '\033[95m'
@@ -45,13 +57,16 @@ def transform_structure(value, callback):
         return [transform_structure(x, callback) for x in value]
     return callback(value)
 
-def decode_int(v):
+def decode_int(v: str) -> int:
     """Decodes integer value from hex string. Helper function useful when decoding data from contracts.
 
     :param str v: Hexadecimal string
     :return: Decoded number
     :rtype: num
     """
+    if isinstance(v, int):
+        return v
+    assert isinstance(v, str)
     if v[0:2] == '0x':
         return int(v.replace('0x', ''), 16)
     else:
@@ -109,7 +124,89 @@ def eq(v1, v2, dismiss = False, msg = None, xtra = ''):
         print(msg + red('exp: {}, got: {}.'.format(v1, v2)) + xtra)
         return True if dismiss else False
 
+def ne(v1, v2, dismiss = False, msg = None, xtra = ''):
+    """Helper function to check that two values are not equal.
+    Prints the message in case of mismatch, and optionally stops tests execution.
+
+    :param Any v1: Expected value
+    :param Any v2: Actual value
+    :param bool dismiss: When False stops the entire execution in case of match.
+        When True only error message is shown
+    :param str msg: Optional additional message to be printed in case of match
+    :param str xtra: Another optional additional message to be printed
+    :return: Result of check
+    :rtype: bool
+    """
+    if v1 != v2:
+        return True
+    else:
+        msg = '' if msg is None else msg + ' '
+        v1 = v1.__repr__()
+        v2 = v2.__repr__()
+        print(msg + red('unexp: {}.'.format(v1)) + xtra)
+        return True if dismiss else False
+
+def leq(v1, v2):
+    """Helper function to check that one value is less or equal than enother.
+    Prints the message in case of mismatch.
+
+    :param Any v1: First value
+    :param Any v2: Second value
+    :return: Result of check
+    :rtype: bool
+    """
+    if v1 <= v2:
+        return True
+    print(red('expected {} <= {}'.format(v1, v2)))
+    return False
+
 def either_or(value, default):
     return value if value is not None else default
 
+def ellipsis(s, max_len):
+    if len(s) > max_len:
+        s = s[:max_len-3] + '...'
+    return s
 
+def check_err(v1: str, v2: str, dismiss = False, msg = None, xtra = ''):
+    """Helper function to check that two values are not equal.
+    Prints the message in case of mismatch, and optionally stops tests execution.
+
+    :param Any v1: Expected value
+    :param Any v2: Actual value
+    :param bool dismiss: When False stops the entire execution in case of match.
+        When True only error message is shown
+    :param str msg: Optional additional message to be printed in case of match
+    :param str xtra: Another optional additional message to be printed
+    :return: Result of check
+    :rtype: bool
+    """
+    if v2.startswith(v1):
+        return True
+    else:
+        msg = '' if msg is None else msg + ' '
+        v1 = v1.__repr__()
+        v2 = v2.__repr__()
+        print(msg + red('exp: {}, got: {}.'.format(v1, v2)) + xtra)
+        return True if dismiss else False
+
+def base64_to_hex(b64: str) -> str:
+    # decode base64 to bytes
+    bytes = base64.b64decode(b64)
+
+    # convert bytes to hex string
+    return binascii.hexlify(bytes).decode('utf-8')
+
+def make_path(name, ext = "") -> str:
+    fn = os.path.join(globals.G_TESTS_PATH, name)
+    if ext != "":
+        assert ext.find('.') != -1
+    if ext == '.abi.json' and os.path.exists(fn + '.abi'):
+        ext = '.abi'
+    elif ext == ".abi" and not os.path.exists(fn + '.abi'):
+        assert os.path.exists(fn + '.abi.json')
+        ext = '.abi.json'
+    if not fn.endswith('.boc'):
+        if not fn.endswith(ext):
+            fn += ext
+    return fn

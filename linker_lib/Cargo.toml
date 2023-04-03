@@ -1,25 +1,32 @@
 [package]
 name = "linker-lib"
-version = "0.4.1"
-authors = ["Tonlabs <info@tonlabs.io>"]
-edition = "2018"
+version = "0.5.0-alpha.5"
+authors = ["EverX"]
+edition = "2021"
 
 [lib]
 name = "linker_lib"
 crate-type = ["cdylib"]
 
 [dependencies]
-base64 = "0.13.0"
-ed25519-dalek = "1.0.1"
-hex = "0.4.3"
-lazy_static = "1.1.1"
-num = "^0.2.1"
-pyo3 = { version = "^0.15.0", features = ["abi3", "abi3-py36", "extension-module"] }
-rand = "0.7.3"
-serde = { version = "1.0.125", features = ["derive"]  }
-serde_json = "1.0.64"
+base64 = "0.13"
+crc = '3.0'
+ed25519-dalek = "1.0"
+ed25519 = "1.0"
+failure = "0.1"
+hex = "0.4"
+lazy_static = "1.1"
+num = "0.4"
+num-format = "0.4"
+pyo3 = { version = "0.15", features = ["abi3", "abi3-py36", "extension-module"] }
+rand = "0.7"
+serde = { version = "1.0", features = ["derive"]  }
+serde_json = "1.0"
 
-ton_abi = { git = "https://github.com/tonlabs/ton-labs-abi.git", tag = "2.1.5" }
-ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git", tag = "1.7.29" }
-ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git", tag = "1.10.11" }
-ton_vm = { git = "https://github.com/tonlabs/ton-labs-vm.git", tag = "1.8.20", default-features = false }
+ton_abi = { git = 'https://github.com/tonlabs/ever-abi.git', tag = '2.3.73' }
+ton_block = { git = 'https://github.com/tonlabs/ever-block.git', tag = '1.9.37' }
+ton_block_json = { git = 'https://github.com/tonlabs/ever-block-json.git', tag = '0.7.105' }
+ton_client = { git = 'https://github.com/tonlabs/ever-SDK.git', tag = '1.42.1' }
+ton_labs_assembler = { git = 'https://github.com/tonlabs/ever-assembler.git', tag = '1.2.89'}
+ton_types = { git = 'https://github.com/tonlabs/ever-types.git', tag = '1.12.7' }
+ton_vm = { git = 'https://github.com/tonlabs/ever-vm.git', tag = '1.8.125' }
