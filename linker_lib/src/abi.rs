@@ -7,35 +7,14 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use std::collections::HashMap;
-
-use ed25519_dalek::{
-    Keypair, PublicKey, /*SecretKey*/
+use crate::{global_state::GlobalState, messages::MsgAbiInfo};
+use ever_abi::json_abi::{
+    decode_unknown_function_call, decode_unknown_function_response, encode_function_call,
 };
-
-use ton_types::{
-    SliceData, BuilderData,
+use ever_block::{
+    BuilderData, Ed25519PrivateKey, Message, SliceData, StateInit
 };
-
-use ton_block::{
-    Message as TonBlockMessage,
-    StateInit,
-};
-
-use ton_abi::json_abi::{
-    encode_function_call,
-    decode_function_response,
-    decode_unknown_function_response,
-    decode_unknown_function_call,
-};
-
-use crate::global_state::{
-    GlobalState,
-};
-
-use crate::messages::{
-    MsgAbiInfo,
-};
+use std::{collections::HashMap, convert::TryInto};
 
 #[derive(Default)]
 pub struct AllAbis {
@@ -48,14 +27,13 @@ impl AllAbis {
     }
 
     fn values(&self) -> Vec<String> {
-        self.all_abis.iter().map(|pair| pair.1.text().clone()).collect()
+        self.all_abis.values().map(|abi| abi.text().to_string()).collect()
     }
 
-    fn decode_function_call(&self, body: &SliceData, internal: bool) -> Option<ton_abi::DecodedMessage> {
+    fn decode_function_call(&self, body: &SliceData, internal: bool) -> Option<ever_abi::DecodedMessage> {
         for abi_str in self.values() {
             // println!("contract: {}", &contract.name);
-            let res = decode_unknown_function_call(abi_str, body.clone(), internal);
-            if let Ok(res) = res {
+            if let Ok(res) = decode_unknown_function_call(&abi_str, body.clone(), internal, false) {
                 return Some(res);
             }
         }
@@ -82,13 +60,17 @@ impl AbiInfo {
     fn from_file(filename: String) -> Result<AbiInfo, String> {
         let abi_str = load_abi_json_string(&filename)?;
         let abi_info = AbiInfo {
-            filename: filename,
+            filename,
             text: abi_str,
         };
         Ok(abi_info)
     }
-    pub fn text(&self) -> &String {
-        &self.text
+    pub fn text(&self) -> &str {
+        self.text.as_str()
+    }
+
+    pub fn filename(&self) -> &str {
+        self.filename.as_str()
     }
 }
 
@@ -96,7 +78,7 @@ pub fn decode_body(
     gs: &GlobalState,
     abi_info: &AbiInfo,
     method: Option<String>,
-    out_msg: &TonBlockMessage,
+    out_msg: &Message,
 ) -> MsgAbiInfo {
 
     let internal = out_msg.is_internal();
@@ -105,26 +87,77 @@ pub fn decode_body(
     // TODO: refactor this function
 
     if gs.trace {
-        println!("decode_body {:?} {:?}", body, &method);
+        println!("decode_body {:?} {:?} {} {}", body, &method, abi_info.filename(), internal);
     }
 
-    if body.is_none() {
+    let Some(body) = body else {
         return MsgAbiInfo::create_empty();
-    }
-    let body = body.unwrap();
+    };
 
+    // if gs.trace {
+    //     println!("decode_body {:#.100}", body.cell());
+    // }
     let abi_str = abi_info.text();
 
     // Check for answer from getter
     if let Some(method) = method {
-        let s = decode_function_response(
-            abi_str.clone(),
-            method.clone(),
-            body.clone(),
-            internal
-        );
-        if let Ok(s) = s {
-            return MsgAbiInfo::create_answer(s, method);
+        
+        // if gs.trace {
+        //     let mut data = body.clone();
+        //     let function_id = data.get_next_u32().unwrap();
+            
+        //     let contract = ever_abi::Contract::load(abi_str.as_bytes()).unwrap();
+        //     let function = contract.function(&method).unwrap();
+        //     let result = function.decode_output(body.clone(), internal, false);
+        //     match result {
+        //         Ok(tokens) => {
+        //             println!("decode params function_id: {:x} => {:x} {:?}", function_id, function.get_output_id(), tokens);
+        //         }
+        //         Err(e) => {
+        //             println!("cannot decode params function_id: {:x} => {:x} {}", function_id, function.get_output_id(), e);
+        //         }
+        //     }
+
+        //     let params = function.output_params();
+        //     let mut cursor = data.clone().into();
+        //     for param in params {
+        //         let last = Some(param) == params.last();
+        //         let result = ever_abi::TokenValue::read_from(&param.kind, cursor, last, &function.abi_version, false);
+        //         match result {
+        //             Ok((token_value, new_cursor)) => {
+        //                 cursor = new_cursor;
+        //                 println!("parsed param {}: {:?}", param.name, token_value);
+        //             }
+        //             Err(e) => {
+        //                 println!("cannot parse param {}: {}", param.name, e);
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     // if let Ok(set) = ever_block::ValidatorSet::construct_from(&mut data.clone()) {
+        //     //     // for descr in set.list() {
+        //     //     //     println!("validator: {:?}", descr);
+        //     //     // }
+        //     //     set.write_to_file("D:\\set.boc").unwrap();
+        //     //     out_msg.write_to_file("D:\\msg.boc").unwrap();
+        //     // }
+        // }
+
+        let contract = ever_abi::Contract::load(abi_str.as_bytes()).unwrap();
+        let result = contract.decode_output(body.clone(), internal, false)
+            .and_then(|result| ever_abi::token::Detokenizer::detokenize(&result.tokens));
+        match result {
+            Ok(s) => {
+                if gs.trace {
+                    println!("parsed params for method {}: {}", method, s);
+                }
+                return MsgAbiInfo::create_answer(s, method);
+            }
+            Err(e) => {
+                if gs.trace {
+                    println!("cannot decode params for method: {} {}", method, e);
+                }
+            }
         }
     }
 
@@ -135,7 +168,7 @@ pub fn decode_body(
     }
 
     // Check for event
-    let s = decode_unknown_function_response(abi_str.clone(), body.clone(), internal);
+    let s = decode_unknown_function_response(abi_str, body.clone(), internal, true);
     if let Ok(s) = s {
         return MsgAbiInfo::create_event(s.params, s.function_name);
     }
@@ -147,26 +180,26 @@ pub fn build_abi_body(
     abi_info: &AbiInfo,
     method: &str,
     params: &str,
-    header: Option<String>,
+    header: Option<&str>,
     internal: bool,
-    pair: Option<&Keypair>,
+    sign_key: Option<&Ed25519PrivateKey>,
 ) -> Result<BuilderData, String> {
     encode_function_call(
-        abi_info.text().clone(),
-        method.to_owned(),
+        abi_info.text(),
+        method,
         header,
-        params.to_owned(),
+        params,
         internal,
-        pair,
+        sign_key,
+        None, // TODO: check here
     ).map_err(|e| format!("cannot encode abi body: {:?}", e))
 }
 
 pub fn set_public_key(state_init: &mut StateInit, pubkey: String) -> Result<(), String> {
     let pubkey = hex::decode(pubkey)
         .map_err(|e| format!("cannot decode public key: {}", e))?;
-    let pubkey = PublicKey::from_bytes(&pubkey).unwrap();
-    let data = state_init.data.clone().unwrap().into();
-    let new_data = ton_abi::Contract::insert_pubkey(data, pubkey.as_bytes()).unwrap();
+    let data = SliceData::load_cell(state_init.data.clone().unwrap_or_default()).unwrap();
+    let new_data = ever_abi::Contract::insert_pubkey(data, pubkey.as_slice().try_into().unwrap()).unwrap();
     state_init.set_data(new_data.into_cell());
     Ok(())
 }
@@ -174,4 +207,20 @@ pub fn set_public_key(state_init: &mut StateInit, pubkey: String) -> Result<(), 
 fn load_abi_json_string(abi_file: &str) -> Result<String, String> {
     std::fs::read_to_string(abi_file)
         .map_err(|e| format!("unable to read ABI file '{}': {}", abi_file, e))
+}
+
+#[test]
+fn test_load_set() {
+    let filename = "D:\\work/TestSuite4/elector/tests/binaries/Config.abi.json";
+    let abi_info = AbiInfo::from_file(filename.to_string()).unwrap();
+    let mut gs = GlobalState::default();
+    gs.trace = true;
+    let out_msg = Message::construct_from_file("D:\\msg.boc").unwrap();
+    let info = decode_body(
+        &gs,
+        &abi_info,
+        Some("get_next_vset".to_string()),
+        &out_msg
+    );
+    println!("result: {:?}", info);
 }

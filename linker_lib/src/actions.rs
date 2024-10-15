@@ -7,11 +7,11 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use ton_types::{
+use ever_block::{
     Cell,
 };
 
-use ton_block::{
+use ever_block::{
     Message as TonBlockMessage,
     MsgAddressInt,
     OutAction, 
@@ -26,10 +26,10 @@ use crate::messages::{
 };
 
 use crate::util::{
-    bigint_to_u64, get_msg_value, substitute_address,
+    get_msg_value, substitute_address,
 };
 
-use crate::call_contract::{
+use crate::call::{
     ExecutionResult,
 };
 
@@ -185,13 +185,13 @@ fn process_action(
             // TODO: support other modes when needed. Add more tests. Refactor balance logic
             if mode == 0 {
                 // TODO: support other currencies
-                state.reserved_balance = value.grams.0 as u64;
+                state.reserved_balance = value.grams.as_u64().unwrap();
                 if gs.trace {
                     println!("reserving balance {}", state.reserved_balance);
                 }
             } else if mode == 4 {
                 let orig_balance = gs.get_contract(&address).unwrap().balance();
-                state.reserved_balance = orig_balance + bigint_to_u64(&value.grams.value());
+                state.reserved_balance = orig_balance + value.grams.as_u64().unwrap();
             } else {
                 println!("OutAction::ReserveCurrency - Unsupported mode {}", mode);
             }

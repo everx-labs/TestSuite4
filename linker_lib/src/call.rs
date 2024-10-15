@@ -13,31 +13,30 @@ use serde::{
     Serialize,
 };
 
-use ton_block::{
+use ever_block::{
     CurrencyCollection, Deserializable,
     MsgAddressInt,
     OutActions,
     Serializable, StateInit,
 };
 
-use ton_types::{
-    SliceData, BuilderData, Cell,
+use ever_block::{
+    SliceData, Cell,
 };
 
-use ton_vm::stack::{
+use ever_vm::stack::{
     StackItem, Stack, savelist::SaveList, integer::IntegerData,
 };
 
-use ton_vm::error::tvm_exception;
-use ton_vm::SmartContractInfo;
+use ever_vm::error::tvm_exception;
+use ever_vm::{int, SmartContractInfo};
 
-use ton_vm::executor::{
+use ever_vm::executor::{
     Engine, EngineTraceInfo, EngineTraceInfoType, gas::gas_state::Gas
 };
 
 use crate::global_state::{
-    // GlobalState,
-    ContractInfo,
+    make_config_params, ContractInfo, GlobalState
 };
 
 use crate::debug_info::{
@@ -79,16 +78,12 @@ pub struct ExecutionResultEx {
 }
 
 pub fn call_contract_ex(
+    gs:             &GlobalState,
     contract_info:  &ContractInfo,
     msg_info:       &MessageInfo2,
-    debug:          bool,
-    trace2:         bool,
-    config_params:  Option<Cell>,
-    now:            u64,
-    lt:             u64,
 ) -> ExecutionResult {
 
-    if debug {
+    if gs.trace {
         println!("call_contract_ex");
     }
 
@@ -118,11 +113,10 @@ pub fn call_contract_ex(
     let (code, data) = load_code_and_data(&state_init);
 
     let registers = initialize_registers(
+        gs,
         data,
         addr,
-        now, lt,
         (contract_balance, CurrencyCollection::with_grams(contract_balance)),
-        config_params,
     );
 
     let mut stack = Stack::new();
@@ -130,10 +124,7 @@ pub fn call_contract_ex(
         let msg = msg_info.ton_msg().unwrap();
         let msg_cell = StackItem::Cell(msg.serialize().unwrap().into());
 
-        let body: SliceData = match msg.body() {
-            Some(b) => b.into(),
-            None => BuilderData::new().into(),
-        };
+        let body = msg.body().unwrap_or_default();
 
         stack
             .push(int!(contract_balance))
@@ -156,10 +147,11 @@ pub fn call_contract_ex(
         Gas::test()
     };
 
-    let mut engine = Engine::new().setup(code, Some(registers), Some(stack), Some(gas));
+    let code = SliceData::load_cell(code).unwrap_or_default();
+    let mut engine = Engine::with_capabilities(gs.capabilities).setup(code, Some(registers), Some(stack), Some(gas));
 
-    let debug_info = if debug || trace2 {
-        load_debug_info(&state_init, debug_info_filename, debug)
+    let debug_info = if gs.trace || gs.trace_on {
+        load_debug_info(debug_info_filename, gs.trace)
     } else {
         None
     };
@@ -167,8 +159,10 @@ pub fn call_contract_ex(
     let trace = Arc::new(Mutex::new(vec![]));
     let trace1 = trace.clone();
 
+    let debug = gs.trace;
+    let trace_on = gs.trace_on;
     engine.set_trace_callback(move |engine, info| {
-        trace_callback(engine, info, debug, trace2, true, &debug_info, &mut trace.clone().lock().unwrap());
+        trace_callback(engine, info, debug, trace_on, true, debug_info.as_ref(), &mut trace.clone().lock().unwrap());
     });
 
     let mut error_msg = None;
@@ -177,7 +171,7 @@ pub fn call_contract_ex(
         Err(exc) => match tvm_exception(exc) {
             Ok(exc) => {
                 error_msg = Some(format!("Unhandled exception: {}", exc));
-                if debug {
+                if gs.trace {
                     println!("{}", error_msg.clone().unwrap());
                 }
                 exc.exception_or_custom_code()
@@ -191,7 +185,7 @@ pub fn call_contract_ex(
 
     let gas_usage = engine.get_gas().get_gas_used();
 
-    if debug {
+    if gs.trace {
         println!("TVM terminated with exit code {}", exit_code);
         println!("Gas used: {}", gas_usage);
         println!("");
@@ -201,7 +195,7 @@ pub fn call_contract_ex(
 
     let gas_credit = engine.get_gas().get_gas_credit();
 
-    if debug {
+    if gs.trace {
         println!("credit = {}", gas_credit);
     }
 
@@ -209,7 +203,7 @@ pub fn call_contract_ex(
     if gas_credit == 0 {
         match engine.get_committed_state().get_root() {
             StackItem::Cell(root_cell) => {
-                state_init.data = Some(root_cell);
+                state_init.data = Some(root_cell.clone());
             },
             StackItem::None => {
                 // do nothing
@@ -225,10 +219,8 @@ pub fn call_contract_ex(
     };
 
     let actions = match engine.get_actions() {
-        StackItem::Cell(cell) =>
-            OutActions::construct_from(&mut cell.into()).unwrap(),
-        _ =>
-            OutActions::default(),
+        StackItem::Cell(ref cell) => OutActions::construct_from_cell(cell.clone()).unwrap(),
+        _ => OutActions::default(),
     };
 
     let info_ex = ExecutionResultEx {
@@ -240,51 +232,42 @@ pub fn call_contract_ex(
         run_id:         None,
         address:        AddressWrapper::with_int(addr.clone()),
         inbound_msg_id: None,
-        exit_code:      exit_code,
-        error_msg:      error_msg,
+        exit_code,
+        error_msg,
         gas:            gas_usage,
     };
 
     ExecutionResult {
-        info:     info,
-        info_ex:  info_ex,
-        info_msg: info_msg,
-        trace:    Some(trace),
+        info,
+        info_ex,
+        info_msg,
+        trace: Some(trace),
     }
 }
 
-fn load_code_and_data(state_init: &StateInit) -> (SliceData, SliceData) {
-    let code: SliceData = state_init.code
-            .clone()
-            .unwrap_or(BuilderData::new().into())
-            .into();
-    let data = state_init.data
-            .clone()
-            .unwrap_or(BuilderData::new().into())
-            .into();
+fn load_code_and_data(state_init: &StateInit) -> (Cell, Cell) {
+    let code = state_init.code.clone().unwrap_or_default();
+    let data = state_init.data.clone().unwrap_or_default();
     (code, data)
 }
 
 fn initialize_registers(
-    data: SliceData,
+    gs: &GlobalState,
+    data: Cell,
     myself: &MsgAddressInt,
-    now: u64,
-    lt: u64,
     balance: (u64, CurrencyCollection),
-    config_params: Option<Cell>,
 ) -> SaveList {
     let mut ctrls = SaveList::new();
-    let mut info = SmartContractInfo::with_myself(myself.serialize().unwrap().into());
-    *info.balance_remaining_grams_mut() = balance.0 as u128;
-    *info.balance_remaining_other_mut() = balance.1.other_as_hashmap().clone();
-    *info.unix_time_mut() = now as u32;
-    if let Some(config_params) = config_params {
-        info.set_config_params(config_params)
-    }
-    *info.block_lt_mut() = lt;
-    *info.trans_lt_mut() = lt;
-    ctrls.put(4, &mut StackItem::Cell(data.into_cell())).unwrap();
-    ctrls.put(7, &mut info.into_temp_data()).unwrap();
+    let mut info = SmartContractInfo::with_myself(myself.write_to_bitstring().unwrap());
+    info.balance_remaining_grams = balance.0 as u128;
+    info.balance_remaining_other = balance.1.other_as_hashmap();
+    info.unix_time = gs.get_now() as u32;
+    info.config_params = make_config_params(gs);
+    info.block_lt = gs.lt;
+    info.trans_lt = gs.lt;
+    info.capabilities = gs.capabilities;
+    ctrls.put(4, &mut StackItem::Cell(data)).unwrap();
+    ctrls.put(7, &mut info.into_temp_data_item()).unwrap();
     ctrls
 }
 
@@ -294,11 +277,11 @@ fn trace_callback(
     trace: bool,
     trace2: bool,
     extended: bool,
-    debug_info: &Option<ContractDebugInfo>,
+    debug_info: Option<&ContractDebugInfo>,
     result: &mut Vec<TraceStepInfo>,
 ) {
 
-    let fname = get_function_name(&debug_info, &info.cmd_code);
+    let fname = get_function_name(debug_info, info);
 
     if trace2 {
         let info2 = TraceStepInfo::from(&info, fname.clone());

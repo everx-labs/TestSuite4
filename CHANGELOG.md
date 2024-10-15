@@ -1,3 +1,10 @@
+## 15-10-2024: TestSuite4 0.5.0
+
+### CHANGES
+
+- Updated to use new libraries
+- Latest ABI
+
 ## 09-11-2021: TestSuite4 0.4.1
 
 ### NEW

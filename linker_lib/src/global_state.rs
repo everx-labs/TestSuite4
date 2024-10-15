@@ -7,37 +7,16 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use std::sync::{Arc, Mutex};
+use crate::{
+    abi::{AbiInfo, AllAbis},
+    call::ExecutionResultInfo,
+    debug_info::TraceStepInfo,
+    messages::{MessageStorage, MsgInfo},
+    util::get_now,
+};
+use ever_block::{Cell, HashmapE, HashmapType, MsgAddressInt, Serializable, StateInit};
 use std::collections::HashMap;
-
-use ton_block::{
-    MsgAddressInt, StateInit,
-};
-
-use ton_types::{
-    BuilderData, Cell, HashmapE, IBitstring,
-    HashmapType,
-};
-
-use crate::util::{
-    get_now,
-};
-
-use crate::call_contract::{
-    ExecutionResultInfo,
-};
-
-use crate::abi::{
-    AbiInfo, AllAbis,
-};
-
-use crate::messages::{
-    MsgInfo, MessageStorage,
-};
-
-use crate::debug_info::{
-    TraceStepInfo,
-};
+use std::sync::{Arc, LazyLock, Mutex};
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -52,15 +31,14 @@ pub struct GlobalState {
     pub last_trace: Option<Vec<TraceStepInfo>>,
     pub last_error_msg: Option<String>,
     pub config_params: HashMap<u32, Cell>,
+    pub capabilities: u64,
     now: Option<u64>,
     now2: u64,
     pub lt: u64,
     pub runs: Vec<ExecutionResultInfo>,
 }
 
-lazy_static! {
-    pub static ref GLOBAL_STATE: Mutex<GlobalState> = Mutex::new(GlobalState::default());
-}
+pub static GLOBAL_STATE: LazyLock<Mutex<GlobalState>> = LazyLock::new(Default::default);
 
 #[derive(Clone)]
 pub struct ContractInfo {
@@ -100,7 +78,13 @@ impl ContractInfo {
         self.abi_info = abi;
     }
     pub fn debug_info_filename(&self) -> String {
-        format!("{}{}", self.name.trim_end_matches("tvc"), "debug.json")
+        if let Some(name) = self.name.strip_suffix("tvc") {
+            format!("{}{}", name, "debug.json")
+        } else if let Some(name) = self.name.strip_suffix("abi.json") {
+            format!("{}{}", name, "debug.json")
+        } else {
+            format!("{}.debug.json", self.name)
+        }
     }
     pub fn balance(&self) -> u64 {
         self.balance
@@ -185,9 +169,7 @@ impl GlobalState {
 pub fn make_config_params(gs: &GlobalState) -> Option<Cell> {
     let mut map = HashmapE::with_hashmap(32, None);
     for (key, value) in gs.config_params.clone() {
-        let mut b = BuilderData::new();
-        b.append_u32(key).unwrap();
-        let key = b.into();
+        let key = key.write_to_bitstring().unwrap();
         map.setref(key, &value).unwrap();
     }
     map.data().map(|v| v.clone())

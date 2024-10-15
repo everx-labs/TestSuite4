@@ -7,9 +7,7 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use ton_block::*;
-use ton_types::cells_serialization::serialize_tree_of_cells;
-use ton_types::Cell;
+use ever_block::{base64_encode, write_boc, Cell, CommonMsgInfo, Message, StateInit};
 
 #[allow(dead_code)]
 pub fn state_init_printer(state: &StateInit) -> String {
@@ -26,9 +24,8 @@ pub fn state_init_printer(state: &StateInit) -> String {
 fn tree_of_cells_into_base64(root_cell: Option<&Cell>) -> String {
     match root_cell {
         Some(cell) => {
-            let mut bytes = Vec::new();
-            serialize_tree_of_cells(cell, &mut bytes).unwrap();
-            base64::encode(&bytes)
+            let bytes = write_boc(cell).unwrap();
+            base64_encode(&bytes)
         }
         None => "None".to_string()
     }
