@@ -14,79 +14,31 @@
 
 */
 
-extern crate base64;
-extern crate ed25519_dalek;
-extern crate hex;
-#[macro_use]
-extern crate lazy_static;
-extern crate num;
-extern crate rand;
-// #[macro_use]
-extern crate serde_json;
-
-extern crate ton_block;
-extern crate ton_types;
-#[macro_use]
-extern crate ton_vm;
-extern crate ton_abi;
-
-mod printer;
-mod util;
 mod abi;
 mod actions;
+mod call;
 mod debug_info;
-mod global_state;
 mod exec;
-mod call_contract;
+mod global_state;
 mod messages;
+mod printer;
+mod util;
 
-use global_state::{
-    GlobalState, GLOBAL_STATE,
-};
-
-use ton_block::Serializable;
-use util::{
-    decode_address, load_from_file,
-};
-
-use messages::{
-    MessageInfo2,
-};
-
+use ed25519_dalek::{Keypair, Signer};
+use ever_block::{ConfigParam8, GlobalVersion};
+use ever_block::{base64_decode, base64_encode, read_single_root_boc, write_boc, Serializable, SliceData};
 use exec::{
-    exec_contract_and_process_actions,
-    generate_contract_address,
-    dispatch_message_impl,
-    deploy_contract_impl,
-    call_contract_impl,
-    load_state_init,
-    encode_message_body_impl,
+    call_contract_impl, deploy_contract_impl, dispatch_message_impl, encode_message_body_impl,
+    exec_contract_and_process_actions, generate_contract_address, load_state_init,
 };
-
-use serde_json::Value as JsonValue;
-
-use ed25519_dalek::{
-    Keypair, Signer,
-};
-
-use rand::rngs::OsRng;
-use rand::rngs::StdRng;
-use rand::SeedableRng;
-
+use global_state::{GlobalState, GLOBAL_STATE};
+use messages::MessageInfo2;
+use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
-use pyo3::exceptions::PyRuntimeError;
-
-use std::io::Cursor;
-
-use ton_types::{
-    SliceData,
-    serialize_toc,
-    cells_serialization::{deserialize_cells_tree},
-    BagOfCells
-};
-
-use std::io::Write;
+use rand::{rngs::{OsRng, StdRng}, SeedableRng};
+use serde_json::Value as JsonValue;
+use util::{decode_address, load_from_file};
 
 #[pyfunction]
 fn set_trace(trace: bool) -> PyResult<()> {
@@ -110,7 +62,6 @@ fn gen_addr(
     wc: i8
 ) -> PyResult<String> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
-    let trace = gs.trace;
 
     let abi_info = gs.all_abis.from_file(&abi_file)
                      .map_err(|e| PyRuntimeError::new_err(e))?;
@@ -124,7 +75,6 @@ fn gen_addr(
         &initial_data,
         &pubkey,
         &private_key,
-        trace,
     ).map_err(|e| PyRuntimeError::new_err(e))?;
     
     let addr = generate_contract_address(&state_init, wc);
@@ -146,7 +96,6 @@ fn deploy_contract(
     balance: u64,
 ) -> PyResult<String> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
-    let trace = gs.trace;
 
     let abi_info = gs.all_abis.from_file(&abi_file)
                      .map_err(|e| PyRuntimeError::new_err(e))?;
@@ -160,7 +109,6 @@ fn deploy_contract(
         &initial_data,
         &pubkey,
         &private_key,
-        trace,
     ).map_err(|e| PyRuntimeError::new_err(e))?;
 
     let target_address = override_address.map(|addr| decode_address(&addr));
@@ -187,11 +135,11 @@ fn fetch_contract_state(address: String) -> PyResult<(Option<String>, Option<Str
     let state_init = contract.state_init();
 
     let code = state_init.code.as_ref().unwrap();
-    let code = serialize_toc(&code).unwrap();
-    let code = base64::encode(&code);
+    let code = write_boc(&code).unwrap();
+    let code = base64_encode(&code);
     let data = state_init.data.as_ref().unwrap();
-    let data = serialize_toc(&data).unwrap();
-    let data = base64::encode(&data);
+    let data = write_boc(&data).unwrap();
+    let data = base64_encode(&data);
 
     Ok((Some(code), Some(data)))
 }
@@ -202,17 +150,10 @@ fn save_tvc(address: String, filename: String) -> PyResult<()> {
     let gs = GLOBAL_STATE.lock().unwrap();
     let contract = gs.get_contract(&address).unwrap();
 
-    let root = contract.state_init().write_to_new_cell()
-        .map_err(|e| format!("Serialization failed: {}", e)).unwrap()
-        .into();
-    let mut buffer = vec![];
-    BagOfCells::with_root(&root).write_to(&mut buffer, false)
-        .map_err(|e| format!("BOC failed: {}", e)).unwrap();
-
-    let mut file = std::fs::File::create(&filename).unwrap();
-    file.write_all(&buffer).map_err(|e| format!("Write to file failed: {}", e)).unwrap();
+    contract.state_init().write_to_file(filename).unwrap();
 
     Ok(())
+        // .map_err(|e| format!("state_init write to file failed: {}", e))
 }
 
 #[pyfunction]
@@ -340,9 +281,8 @@ fn get_now() -> PyResult<u64> {
 fn set_config_param(idx: u32, cell: String) -> PyResult<()> {
     let mut gs = GLOBAL_STATE.lock().unwrap();
 
-    let cell = base64::decode(&cell).unwrap();
-    let mut csor = Cursor::new(cell);
-    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+    let cell = base64_decode(&cell).unwrap();
+    let cell = read_single_root_boc(&cell).unwrap();
 
     let is_empty = cell.bit_length() == 0;
     if gs.trace {
@@ -353,6 +293,26 @@ fn set_config_param(idx: u32, cell: String) -> PyResult<()> {
     } else {
         gs.config_params.insert(idx, cell);
     }
+
+    Ok(())
+}
+
+#[pyfunction]
+fn set_capabilities(capabilities: u64) -> PyResult<()> {
+    let mut gs = GLOBAL_STATE.lock().unwrap();
+
+    gs.capabilities = capabilities;
+
+    let global_version = GlobalVersion {
+        capabilities,
+        ..Default::default()
+    };
+    let cell = ConfigParam8 {global_version}.serialize().unwrap();
+
+    if gs.trace {
+        println!("set_capabilities 0x{:x}", capabilities);
+    }
+    gs.config_params.insert(8, cell);
 
     Ok(())
 }
@@ -385,15 +345,13 @@ fn make_keypair(seed : Option<u64>) -> PyResult<(String, String)> {
 
 #[pyfunction]
 fn sign_cell(cell: String, secret: String) -> PyResult<String> {
-    let cell = base64::decode(&cell).unwrap();
-    // TODO: util?
-    let mut csor = Cursor::new(cell);
-    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
+    let cell = base64_decode(&cell).unwrap();
+    let cell = read_single_root_boc(&cell).unwrap();
 
     let secret = hex::decode(secret).unwrap();
     let keypair = Keypair::from_bytes(&secret).expect("error: invalid key");
 
-    let data = SliceData::from(cell).get_bytestring(0);
+    let data = SliceData::load_cell(cell).unwrap().get_bytestring(0);
     let signature = keypair.sign(&data).to_bytes();
     let signature = hex::encode(signature.to_vec());
 
@@ -432,8 +390,8 @@ fn get_last_error_msg() -> PyResult<Option<String>> {
 fn load_code_cell(filename: String) -> PyResult<String> {
     let state_init = load_from_file(&filename);
     let code = state_init.code.unwrap();
-    let bytes = serialize_toc(&code).unwrap();
-    Ok(base64::encode(&bytes))
+    let bytes = write_boc(&code).unwrap();
+    Ok(base64_encode(&bytes))
 }
 
 #[pyfunction]
@@ -441,8 +399,8 @@ fn load_data_cell(filename: String) -> PyResult<String> {
     // TODO: add tests for that
     let state_init = load_from_file(&filename);
     let data = state_init.data.unwrap();
-    let bytes = serialize_toc(&data).unwrap();
-    Ok(base64::encode(&bytes))
+    let bytes = write_boc(&data).unwrap();
+    Ok(base64_encode(&bytes))
 }
 
 #[pyfunction]
@@ -452,8 +410,8 @@ fn encode_message_body(abi_file: String, method: String, params: String) -> PyRe
         .from_file(&abi_file)
         .map_err(|e| PyRuntimeError::new_err(e))?;
     let cell = encode_message_body_impl(&abi_info, method, params);
-    let result = serialize_toc(&cell.unwrap()).unwrap();
-    Ok(base64::encode(&result))
+    let result = write_boc(&cell.unwrap()).unwrap();
+    Ok(base64_encode(&result))
 }
 /////////////////////////////////////////////////////////////////////////////////////
 /// A Python module implemented in Rust.
@@ -478,6 +436,7 @@ fn linker_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(trace_on))?;
     m.add_wrapped(wrap_pyfunction!(set_contract_abi))?;
     m.add_wrapped(wrap_pyfunction!(set_config_param))?;
+    m.add_wrapped(wrap_pyfunction!(set_capabilities))?;
 
     m.add_wrapped(wrap_pyfunction!(make_keypair))?;
     m.add_wrapped(wrap_pyfunction!(sign_cell))?;

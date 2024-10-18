@@ -7,33 +7,22 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use num::{BigInt};
-use crate::num::ToPrimitive;
-
-use std::io::Cursor;
 use std::time::SystemTime;
 use std::str::FromStr;
 
-use ton_types::{
+use ever_block::{
     UInt256, SliceData, AccountId,
-    cells_serialization::{deserialize_cells_tree}
 };
 
-use ton_block::{
+use ever_block::{
     CommonMsgInfo, MsgAddressIntOrNone,
     CurrencyCollection, Deserializable, ExternalInboundMessageHeader, Grams,
     InternalMessageHeader, Message, MsgAddressExt, MsgAddressInt,
     StateInit, UnixTime32,
 };
 
-pub fn bigint_to_u64(n: &BigInt) -> u64 {
-    n.to_biguint().unwrap().to_u64().unwrap()
-}
-
 pub fn get_msg_value(msg: &Message) -> Option<u64> {
-    let grams = &msg.get_value()?.grams;
-    let grams = bigint_to_u64(&grams.value());
-    Some(grams)
+    msg.get_value()?.grams.as_u64()
 }
 
 fn get_src_addr_mut<'a>(msg: &'a mut Message) -> Option<&'a mut MsgAddressIntOrNone> {
@@ -60,18 +49,18 @@ pub fn load_from_file(contract_file: &str) -> StateInit {
     let content = std::fs::read(contract_file)
         .map_err(|e| format!("Cannot load {}: {}", contract_file, e))
         .unwrap();      // TODO!: return error
-    let mut csor = Cursor::new(content);
-    let cell = deserialize_cells_tree(&mut csor).unwrap().remove(0);
-    StateInit::construct_from(&mut cell.into()).unwrap()
+    StateInit::construct_from_bytes(&content).unwrap()
 }
 
 pub fn create_external_inbound_msg(src_addr: MsgAddressExt, dst_addr: MsgAddressInt, body: Option<SliceData>) -> Message {
     let mut hdr = ExternalInboundMessageHeader::default();
     hdr.dst = dst_addr;
     hdr.src = src_addr;
-    hdr.import_fee = Grams(0x1234u32.into());   // TODO: what's that?
+    hdr.import_fee = 0x1234.into();   // TODO: what's that?
     let mut msg = Message::with_ext_in_header(hdr);
-    *msg.body_mut() = body;
+    if let Some(body) = body {
+        msg.set_body(body);
+    }
     msg
 }
 
@@ -94,9 +83,11 @@ pub fn create_internal_msg(
     hdr.ihr_disabled = true;
     hdr.ihr_fee = Grams::from(0u64);
     hdr.created_lt = lt;
-    hdr.created_at = UnixTime32(at);
+    hdr.created_at = UnixTime32::new(at);
     let mut msg = Message::with_int_header(hdr);
-    *msg.body_mut() = body;
+    if let Some(body) = body {
+        msg.set_body(body);
+    }
     msg
 }
 

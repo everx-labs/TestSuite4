@@ -7,54 +7,18 @@
     Copyright 2019-2021 (c) TON LABS
 */
 
-use ed25519_dalek::{
-    Keypair,
+use crate::{
+    abi::{build_abi_body, decode_body, set_public_key, AbiInfo},
+    actions::process_actions,
+    call::{call_contract_ex, is_success_exit_code, ExecutionResult},
+    debug_info::TraceStepInfo,
+    global_state::{ContractInfo, GlobalState},
+    messages::{create_bounced_msg, create_inbound_msg, MessageInfo2, MsgAbiInfo, MsgInfo},
+    util::{convert_address, decode_address, get_msg_value, load_from_file},
 };
-
-use ton_block::{
-    Message as TonBlockMessage,
-    MsgAddressInt,
-    StateInit,
-    GetRepresentationHash,
-};
-
-use ton_types::{
-    Cell,
-};
-
-use crate::util::{
-    decode_address, load_from_file, get_msg_value,
-    convert_address,
-};
-
-use crate::global_state::{
-    GlobalState,
-    ContractInfo,
-    make_config_params,
-};
-
-use crate::actions::{
-    process_actions,
-};
-
-use crate::call_contract::{
-    call_contract_ex,
-    is_success_exit_code, ExecutionResult,
-};
-
-use crate::messages::{
-    MsgAbiInfo,
-    MsgInfo, MessageInfo2,
-    create_bounced_msg, create_inbound_msg,
-};
-
-use crate::abi::{
-    decode_body,
-    build_abi_body, set_public_key, AbiInfo,
-};
-
-use crate::debug_info::{
-    TraceStepInfo,
+use ever_block::{
+    ed25519_create_private_key, Cell, Ed25519PrivateKey, GetRepresentationHash, Message,
+    MsgAddressInt, SliceData, StateInit,
 };
 
 #[derive(Default)]
@@ -78,7 +42,7 @@ impl ExecutionResult2 {
             gas:         result.info.gas,
             info:        result.info_msg,
             trace:       result.trace,
-            out_actions: out_actions,
+            out_actions,
         }
     }
     fn with_aborted(reason: String) -> ExecutionResult2 {
@@ -132,16 +96,13 @@ pub fn deploy_contract_impl(
 }
 
 pub fn apply_constructor(
+    gs: &GlobalState,
     state_init: StateInit,
     abi_file: &str,
     abi_info: &AbiInfo,
     ctor_params : &str,
     private_key: Option<String>,
-    trace: bool,
-    trace2: bool,
-    time_header: Option<String>,
-    now: u64,
-    lt: u64,
+    time_header: Option<&str>,
     error_msg: &mut Option<String>,
 ) -> Result<StateInit, String> {
 
@@ -167,16 +128,13 @@ pub fn apply_constructor(
     );
 
     let msg_info = MessageInfo2::with_offchain_ctor(
-        create_inbound_msg(addr.clone(), &body, now)
+        create_inbound_msg(addr.clone(), body, gs.get_now())
     );
 
     let result = call_contract_ex(
+        gs,
         &contract_info,
         &msg_info,
-        trace, trace2,
-        None,
-        now,
-        lt,
     );
 
     *error_msg = result.info.error_msg.clone();
@@ -297,12 +255,9 @@ pub fn exec_contract_and_process_actions(
     }
 
     let mut result = call_contract_ex(
+        gs,
         &contract_info,
         &msg_info,
-        gs.trace, gs.trace_on,
-        make_config_params(&gs),
-        gs.get_now(),
-        gs.lt,
     );
 
     gs.last_error_msg = result.info.error_msg.clone();
@@ -311,7 +266,7 @@ pub fn exec_contract_and_process_actions(
     gs.register_run_result(result.info.clone());
 
     if result.info_msg == Some("no_accept".to_string()) {
-        return ExecutionResult2::with_actions(result, vec![])
+        return ExecutionResult2::with_actions(result, Vec::new())
     }
 
     let msgs = process_actions(
@@ -322,13 +277,15 @@ pub fn exec_contract_and_process_actions(
         msg_info.value(),
     );
 
-    if let Err(reason) = msgs {
-        return ExecutionResult2::with_aborted(reason);
+    match msgs {
+        Ok(msgs) => {
+            let out_actions = gs.add_messages(msgs);
+            ExecutionResult2::with_actions(result, out_actions)
+        }
+        Err(reason) => {
+            ExecutionResult2::with_aborted(reason)
+        }
     }
-
-    let out_actions = gs.add_messages(msgs.unwrap());
-
-    ExecutionResult2::with_actions(result, out_actions)
 }
 
 pub fn encode_message_body_impl(
@@ -380,7 +337,7 @@ pub fn call_contract_impl(
         // println!("private_key {:?}", private_key);
     }
 
-    let keypair = decode_private_key(&private_key);
+    let sign_key = decode_private_key(&private_key);
 
     let abi_info = contract_info.abi_info();
 
@@ -388,18 +345,17 @@ pub fn call_contract_impl(
         abi_info,
         &method,
         &params,
-        gs.make_time_header(),
+        gs.make_time_header().as_deref(),
         false, // internal
-        keypair.as_ref(),
+        sign_key.as_ref(),
     );
 
-    if body.is_err() {
-        return Err(body.err().unwrap());
-    }
+    let body = match body {
+        Ok(body) => body,
+        Err(err) => return Err(err),
+    };
 
-    let body = body.unwrap();
-
-    let msg = create_inbound_msg(addr.clone(), &body, gs.get_now());
+    let msg = create_inbound_msg(addr.clone(), body, gs.get_now());
 
     // TODO: move to function
     let mut msg_abi = decode_message(&gs, &abi_info, Some(method.clone()), &msg, 0);
@@ -425,21 +381,17 @@ pub fn load_state_init(
     initial_data: &Option<String>,
     pubkey: &Option<String>,
     private_key: &Option<String>,
-    trace: bool,
 ) -> Result<StateInit, String> {
     let mut state_init = load_from_file(&contract_file);
     if let Some(pubkey) = pubkey {
-        let result = set_public_key(&mut state_init, pubkey.clone());
-        if result.is_err() {
-            return Err(result.err().unwrap());
-        }
+        set_public_key(&mut state_init, pubkey.clone())?;
     }
 
     if let Some(initial_data) = initial_data {
-        let new_data = ton_abi::json_abi::update_contract_data(
+        let new_data = ever_abi::json_abi::update_contract_data(
             abi_info.text(),
             &initial_data,
-            state_init.data.clone().unwrap_or_default().into(),
+            SliceData::load_cell(state_init.data.clone().unwrap_or_default()).unwrap(),
         ).map_err(|e| e.to_string())?;
 
         state_init.set_data(new_data.into_cell());
@@ -452,13 +404,12 @@ pub fn load_state_init(
         }
         let mut error_msg = None;
         let result = apply_constructor(
-                        state_init, &abi_file, &abi_info, &ctor_params,
-                        private_key.clone(),
-                        trace, gs.trace_on,
-                        time_header, gs.get_now(),
-                        gs.lt,
-                        &mut error_msg,
-                    );
+            gs,
+            state_init, &abi_file, &abi_info, &ctor_params,
+            private_key.clone(),
+            time_header.as_deref(),
+            &mut error_msg,
+        );
         gs.last_error_msg = error_msg;
         if result.is_err() {
             return Err(result.err().unwrap());
@@ -468,18 +419,18 @@ pub fn load_state_init(
     Ok(state_init)
 }
 
-pub fn decode_private_key(private_key: &Option<String>) -> Option<Keypair> {
-    private_key.as_ref().map(|key| {
-        let secret = hex::decode(key).unwrap();
-        Keypair::from_bytes(&secret).expect("error: invalid key")
-    })
+pub fn decode_private_key(private_key: &Option<String>) -> Option<Ed25519PrivateKey> {
+    private_key
+        .as_ref()
+        .and_then(|key| hex::decode(key).ok())
+        .and_then(|key| ed25519_create_private_key(&key).ok())
 }
 
 pub fn decode_message(
     gs: &GlobalState,
     abi_info: &AbiInfo,
     getter_name: Option<String>,
-    out_msg: &TonBlockMessage,
+    out_msg: &Message,
     additional_value: u64,
 ) -> MsgAbiInfo {
     let mut decoded_msg = decode_body(gs, abi_info, getter_name, out_msg);

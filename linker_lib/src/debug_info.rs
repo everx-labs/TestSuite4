@@ -1,43 +1,18 @@
 /*
-    This file is part of TON OS.
+    This file is part of Ever OS.
 
-    TON OS is free software: you can redistribute it and/or modify
+    Ever OS is free software: you can redistribute it and/or modify
     it under the terms of the Apache License 2.0 (http://www.apache.org/licenses/)
 
-    Copyright 2019-2021 (c) TON LABS
+    Copyright 2019-2024 (c) EverX
 */
 
-use std::io::Write;
-use std::collections::HashMap;
-use ton_types::dictionary::HashmapE;
+use ever_assembler::DbgInfo;
+use ever_vm::executor::EngineTraceInfo;
 use serde::{Deserialize, Serialize};
-use ton_block::{Serializable, StateInit};
-
-use ton_types::{
-    UInt256, Cell, SliceData,
-};
-
-use ton_vm::executor::{
-    EngineTraceInfo,
-};
-
-
 
 pub struct ContractDebugInfo {
-    hash2function: HashMap<UInt256, String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct DebugInfoFunction {
-    pub id: i64,  // actually either i32 or u32.
-    pub name: String
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct DebugInfo {
-    pub internals: Vec<DebugInfoFunction>,
-    pub publics: Vec<DebugInfoFunction>,
-    pub privates: Vec<DebugInfoFunction>,
+    hash2function: DbgInfo,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -49,46 +24,35 @@ pub struct TraceStepInfo {
     pub stack: Vec<String>,
 }
 
-
-impl DebugInfo {
-    pub fn _new() -> Self {
-        DebugInfo { internals: vec![], publics: vec![], privates: vec![] }
-    }
-}
-
 impl ContractDebugInfo {
-    pub fn find_function(&self, cmd_code: &SliceData) -> Option<&String> {
-        self.hash2function.get(&cmd_code.cell().repr_hash())
+    pub fn find_function(&self, info: &EngineTraceInfo) -> Result<String, &'static str> {
+        let cell_hash = info.cmd_code.cell().repr_hash();
+        let offset = info.cmd_code.pos();
+        match self.hash2function.get(&cell_hash) {
+            Some(offset_map) => match offset_map.get(&offset) {
+                Some(pos) => Ok(format!("{}:{}", pos.filename, pos.line)),
+                None => Err("-:0 (offset not found))")
+            },
+            None => Err("-:0 (cell hash not found)")
+        }
     }
 }
 
 impl TraceStepInfo {
     #[allow(dead_code)]
     pub fn from(info: &EngineTraceInfo, fname: Option<String>) -> TraceStepInfo {
-        let stack = info.stack.iter().map(
-            |x| format!("{}", x)
-        ).collect();
+        let stack = info.stack.iter().map(|x| x.to_string()).collect();
         TraceStepInfo {
             id: info.step,
             cmd: info.cmd_str.clone(),
             gas: info.gas_cmd,
             func: fname,
-            stack: stack,
+            stack,
         }
     }
 }
 
-pub fn _save_debug_info(
-    info: DebugInfo,
-    filename: String
-) {
-    let s = serde_json::to_string_pretty(&info).unwrap();
-    let mut f = std::fs::File::create(filename).unwrap();
-    write!(f, "{}", s).unwrap();
-}
-
 pub fn load_debug_info(
-    state_init: &StateInit,
     filename: String,
     verbose: bool,
 ) -> Option<ContractDebugInfo> {
@@ -96,98 +60,20 @@ pub fn load_debug_info(
     if verbose {
         println!("---- load_debug_info ({})----", filename);
     }
-
-    let mut hash2function = HashMap::new();
-
-    let debug_info_str = std::fs::read_to_string(filename);
-    if debug_info_str.is_err() {
-        return None;
-    }
-    let debug_info_json : DebugInfo = serde_json::from_str(&debug_info_str.unwrap()).unwrap();
-
-    let root_cell = state_init.code.as_ref().unwrap();
-    let dict1 = HashmapE::with_hashmap(32, Some(root_cell.reference(0).unwrap()));
-    let dict2 = HashmapE::with_hashmap(32, Some(root_cell.reference(1).unwrap().reference(0).unwrap()));
-
-    for func in debug_info_json.internals.iter() {
-        let id = &(func.id as i32);
-        let key = id.write_to_new_cell().unwrap().into_cell().unwrap().into();
-        let val = dict1.get(key).unwrap();
-        if val.is_some() {
-            let val = val.unwrap();
-            let mut c = val.cell();
-            let mut cc;
-            loop {
-                let hash = c.repr_hash();
-                hash2function.insert(hash, func.name.clone());
-                if c.references_count() == 0 {
-                    break;
-                }
-                cc = c.reference(0).unwrap();
-                c = &cc;
-            }
+    let hash2function = match std::fs::read_to_string(&filename) {
+        Ok(debug_info_str) => {
+            serde_json::from_str::<DbgInfo>(&debug_info_str)
+                .unwrap_or_else(|err| panic!("cannot parse {} - {}", filename, err))
         }
-    }
-
-    for func in debug_info_json.publics.iter() {
-        let id = &(func.id as u32);
-        let key = id.write_to_new_cell().unwrap().into_cell().unwrap().into();
-        let val = dict1.get(key).unwrap();
-        if val.is_some() {
-            let val = val.unwrap();
-            let mut c = val.cell();
-            let mut cc;
-            loop {
-                let hash = c.repr_hash();
-                hash2function.insert(hash, func.name.clone());
-                if c.references_count() == 0 {
-                    break;
-                }
-                cc = c.reference(0).unwrap();
-                c = &cc;
-            }
-        }
-    }
-
-    for func in debug_info_json.privates.iter() {
-        let id = &(func.id as u32);
-        let key = id.write_to_new_cell().unwrap().into_cell().unwrap().into();
-        if let Some(val) = dict2.get(key).unwrap() {
-            set_function_hashes(&mut hash2function, &func.name, &val.cell());
-        }
-    }
-
-    hash2function.insert(root_cell.repr_hash(), "selector".to_owned());
-    if let Ok(selector2) = root_cell.reference(1) {
-        hash2function.insert(selector2.repr_hash(), "selector2".to_owned());
-    }
-
-    Some(ContractDebugInfo{hash2function: hash2function})
-}
-
-// TODO: make member
-fn set_function_hashes(
-    mut hash2function: &mut HashMap<UInt256, String>,
-    fname: &String,
-    cell: &Cell,
-) {
-    let hash = cell.repr_hash();
-    hash2function.insert(hash, fname.clone());
-    for i in 0..cell.references_count() {
-        set_function_hashes(&mut hash2function, fname, &cell.reference(i).unwrap());
-    }
+        Err(_) => return None
+    };
+    Some(ContractDebugInfo{hash2function})
 }
 
 pub fn get_function_name(
-    debug_info: &Option<ContractDebugInfo>,
-    cmd_code: &SliceData,
+    debug_info: Option<&ContractDebugInfo>,
+    info: &EngineTraceInfo,
 ) -> Option<String> {
-    if let Some(debug_info) = debug_info {
-        debug_info
-            .find_function(&cmd_code)
-            .map(|fname| fname.clone())
-    } else {
-        None
-    }
+    debug_info?.find_function(info).ok()
 }
 

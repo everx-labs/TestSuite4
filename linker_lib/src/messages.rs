@@ -15,13 +15,11 @@ use serde::{
 };
 
 
-use ton_block::{
-    Message as TonBlockMessage,
-    CommonMsgInfo, CurrencyCollection,
-    MsgAddress, MsgAddressExt, MsgAddressInt, MsgAddressIntOrNone,
+use ever_block::{
+    CommonMsgInfo, CurrencyCollection, Message as TonBlockMessage, MsgAddress, MsgAddressExt, MsgAddressInt, MsgAddressIntOrNone, SliceData
 };
 
-use ton_types::{
+use ever_block::{
     BuilderData, IBitstring,
 };
 
@@ -474,7 +472,7 @@ pub fn create_bounced_msg(msg: &MsgInfo, now: u64) -> TonBlockMessage {
         // TODO: handle possible overflow here
         b.append_bytestring(&body).unwrap();
     }
-    let body = b.into();
+    let body = SliceData::load_builder(b).unwrap();
 
     create_internal_msg(
         msg.dst(),
@@ -489,15 +487,15 @@ pub fn create_bounced_msg(msg: &MsgInfo, now: u64) -> TonBlockMessage {
 
 pub fn create_inbound_msg(
     addr: MsgAddressInt,
-    body: &BuilderData,
+    body: BuilderData,
     now: u64,
 ) -> TonBlockMessage {
-    create_inbound_msg_impl(-1, &body, addr, now).unwrap()
+    create_inbound_msg_impl(-1, body, addr, now).unwrap()
 }
 
 fn create_inbound_msg_impl(         // TODO: this function is used in only one place
     selector: i32,
-    body: &BuilderData,
+    body: BuilderData,
     dst: MsgAddressInt,
     now: u64
 ) -> Option<TonBlockMessage> {
@@ -515,7 +513,7 @@ fn create_inbound_msg_impl(         // TODO: this function is used in only one p
                 CurrencyCollection::with_grams(0),
                 1,
                 now as u32,
-                Some(body.into()),
+                Some(SliceData::load_builder(body).unwrap()),
                 bounced,
             ))
         },
@@ -527,15 +525,14 @@ fn create_inbound_msg_impl(         // TODO: this function is used in only one p
                 },
                 None => {
                     // TODO: Use MsgAdressNone?
-                    MsgAddressExt::with_extern(
-                        BuilderData::with_raw(vec![0x55; 8], 64).unwrap().into()
-                    ).unwrap()
+                    let address = SliceData::from_raw(vec![0x55; 8], 64);
+                    MsgAddressExt::with_extern(address).unwrap()
                 },
             };
             Some(create_external_inbound_msg(
                 src,
                 dst,
-                Some(body.into()),
+                Some(SliceData::load_builder(body).unwrap()),
             ))
         },
         _ => None,
